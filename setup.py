@@ -25,5 +25,7 @@ setup(
     entry_points = {
         'console_scripts': ['textlsp=textLSP.cli:main'],
     },
-    install_requires=[],
+    install_requires=[
+        'pygls'
+    ],
 )
