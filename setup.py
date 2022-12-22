@@ -26,6 +26,7 @@ setup(
         'console_scripts': ['textlsp=textLSP.cli:main'],
     },
     install_requires=[
-        'pygls'
+        'lsprotocol',
+        'pygls',
     ],
 )
