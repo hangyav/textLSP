@@ -1,4 +1,5 @@
 import logging
+import pkg_resources
 
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol, lsp_method
@@ -38,7 +39,7 @@ class TextLSPLanguageServer(LanguageServer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.settings = dict()
-        self.analyser_handler = AnalyserHandler()
+        self.analyser_handler = AnalyserHandler(self)
 
     def get_analyser_settings(self, settings=None):
         if settings is None:
@@ -62,7 +63,11 @@ class TextLSPLanguageServer(LanguageServer):
             )
 
 
-SERVER = TextLSPLanguageServer(protocol_cls=TextLSPLanguageServerProtocol)
+SERVER = TextLSPLanguageServer(
+    name='textLSP',
+    version=pkg_resources.require('textLSP')[0].version,
+    protocol_cls=TextLSPLanguageServerProtocol,
+)
 
 
 @SERVER.feature(TEXT_DOCUMENT_DID_OPEN)
