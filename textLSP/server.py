@@ -7,12 +7,16 @@ from pygls.lsp.types import InitializeParams, InitializeResult
 from lsprotocol.types import (
     TEXT_DOCUMENT_DID_OPEN,
     TEXT_DOCUMENT_DID_CHANGE,
+    WORKSPACE_DID_CHANGE_CONFIGURATION,
 )
 from lsprotocol.types import (
         DidOpenTextDocumentParams,
         DidChangeTextDocumentParams,
+        DidChangeConfigurationParams,
 )
 from .workspace import TextLSPWorkspace
+from .utils import merge_dicts
+from .analysers.handler import AnalyserHandler
 
 
 logger = logging.getLogger(__name__)
@@ -23,10 +27,42 @@ class TextLSPLanguageServerProtocol(LanguageServerProtocol):
     def lsp_initialize(self, params: InitializeParams) -> InitializeResult:
         result = super().lsp_initialize(params)
         self.workspace = TextLSPWorkspace.workspace2textlspworkspace(self.workspace)
+        self._server.update_settings(params.initialization_options)
         return result
 
 
-SERVER = LanguageServer(protocol_cls=TextLSPLanguageServerProtocol)
+class TextLSPLanguageServer(LanguageServer):
+    CONFIGURATION_SECTION = 'textLSP'
+    CONFIGURATION_ANALYSERS = 'analysers'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.settings = dict()
+        self.analyser_handler = AnalyserHandler()
+
+    def get_analyser_settings(self, settings=None):
+        if settings is None:
+            settings = self.settings
+
+        if (
+            self.CONFIGURATION_SECTION in settings and
+            self.CONFIGURATION_ANALYSERS in settings[self.CONFIGURATION_SECTION]
+        ):
+            return self.settings[self.CONFIGURATION_SECTION][self.CONFIGURATION_ANALYSERS]
+        return None
+
+    def update_settings(self, settings):
+        if settings is None or len(settings) == 0:
+            return
+        self.settings = merge_dicts(self.settings, settings)
+        if self.get_analyser_settings(settings):
+            # update only if there was any update related to it
+            self.analyser_handler.update_settings(
+                    self.get_analyser_settings()
+            )
+
+
+SERVER = TextLSPLanguageServer(protocol_cls=TextLSPLanguageServerProtocol)
 
 
 @SERVER.feature(TEXT_DOCUMENT_DID_OPEN)
@@ -39,3 +75,8 @@ async def did_open(ls, params: DidOpenTextDocumentParams):
 async def did_change(ls, params: DidChangeTextDocumentParams):
     """Text document did change notification."""
     pass
+
+
+@SERVER.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)
+def did_change_configuration(ls, params: DidChangeConfigurationParams):
+    ls.update_settings(params.settings)
