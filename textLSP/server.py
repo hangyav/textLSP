@@ -8,12 +8,14 @@ from pygls.lsp.types import InitializeParams, InitializeResult
 from lsprotocol.types import (
     TEXT_DOCUMENT_DID_OPEN,
     TEXT_DOCUMENT_DID_CHANGE,
+    TEXT_DOCUMENT_DID_CLOSE,
     WORKSPACE_DID_CHANGE_CONFIGURATION,
 )
 from lsprotocol.types import (
         DidOpenTextDocumentParams,
         DidChangeTextDocumentParams,
         DidChangeConfigurationParams,
+        DidCloseTextDocumentParams,
 )
 from .workspace import TextLSPWorkspace
 from .utils import merge_dicts
@@ -72,14 +74,17 @@ SERVER = TextLSPLanguageServer(
 
 @SERVER.feature(TEXT_DOCUMENT_DID_OPEN)
 async def did_open(ls, params: DidOpenTextDocumentParams):
-    """Text document did open notification."""
-    ls.show_message('Text Document Did Open')
+    await ls.analyser_handler.did_open(params)
 
 
 @SERVER.feature(TEXT_DOCUMENT_DID_CHANGE)
 async def did_change(ls, params: DidChangeTextDocumentParams):
-    """Text document did change notification."""
-    pass
+    await ls.analyser_handler.did_change(params)
+
+
+@SERVER.feature(TEXT_DOCUMENT_DID_CLOSE)
+async def did_close(ls, params: DidCloseTextDocumentParams):
+    await ls.analyser_handler.did_close(params)
 
 
 @SERVER.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)

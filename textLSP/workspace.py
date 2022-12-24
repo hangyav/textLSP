@@ -8,10 +8,14 @@ from pygls.lsp.types import NumType
 logger = logging.getLogger(__name__)
 
 
-class TxtDocument(Document):
+class BaseDocument(Document):
     @property
     def cleaned_source(self):
         return self.source
+
+    @property
+    def language(self):
+        return 'en'
 
 
 class DocumentTypeFactory():
@@ -24,7 +28,7 @@ class DocumentTypeFactory():
         sync_kind=None,
     ) -> Document:
         # TODO only txt is supported for now
-        return TxtDocument(
+        return BaseDocument(
             uri=doc_uri,
             source=source,
             version=version,

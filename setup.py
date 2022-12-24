@@ -28,5 +28,6 @@ setup(
     install_requires=[
         'lsprotocol',
         'pygls',
+        'language-tool-python',
     ],
 )
