@@ -7,7 +7,6 @@ from lsprotocol.types import (
         DidChangeTextDocumentParams,
         DidCloseTextDocumentParams,
         Diagnostic,
-        DiagnosticSeverity,
 )
 from pygls.server import LanguageServer
 
@@ -38,7 +37,7 @@ class LanguageToolAnalyser(Analyser):
                     range=doc.range_at_offset(match.offset, match.errorLength),
                     message=match.message,
                     source='languagetool',
-                    severity=DiagnosticSeverity.Warning,
+                    severity=self.get_severity(),
                     code=match.ruleId,
                 )
             )
@@ -46,6 +45,7 @@ class LanguageToolAnalyser(Analyser):
         self.language_server.publish_diagnostics(doc.uri, diagnostics)
 
     # def did_change(self, params: DidChangeTextDocumentParams):
+    #     TODO
     #     raise NotImplementedError()
 
     def did_close(self, params: DidCloseTextDocumentParams):
