@@ -44,9 +44,11 @@ class LanguageToolAnalyser(Analyser):
 
         self.language_server.publish_diagnostics(doc.uri, diagnostics)
 
-    # def did_change(self, params: DidChangeTextDocumentParams):
-    #     TODO
-    #     raise NotImplementedError()
+    def did_change(self, params: DidChangeTextDocumentParams):
+        # TODO
+        self.did_open(DidOpenTextDocumentParams(
+            text_document=params.text_document
+        ))
 
     def did_close(self, params: DidCloseTextDocumentParams):
         workspace = self.language_server.workspace

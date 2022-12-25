@@ -6,7 +6,7 @@ from lsprotocol.types import (
         DiagnosticSeverity,
 )
 
-from ..workspace import BaseDocument
+from ..documents.document import BaseDocument
 from ..utils import merge_dicts
 
 

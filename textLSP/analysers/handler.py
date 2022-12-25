@@ -1,6 +1,3 @@
-import sys
-import inspect
-import importlib
 import logging
 import asyncio
 
@@ -10,10 +7,10 @@ from lsprotocol.types import (
         DidChangeTextDocumentParams,
         DidCloseTextDocumentParams,
 )
-from pygls.server import LanguageServer
 
 from .. import analysers
 from .analyser import Analyser
+from ..utils import get_class
 
 
 logger = logging.getLogger(__name__)
@@ -40,52 +37,21 @@ class AnalyserHandler():
                 analyser.update_settings(config)
                 self.analysers[name] = analyser
             else:
-                cls = self._get_analyser_class(name)
-                if cls is not None:
+                try:
+                    cls = get_class(
+                        '{}.{}'.format(analysers.__name__, name),
+                        Analyser,
+                    )
                     self.analysers[name] = cls(self.language_server, config)
+                except ImportError as e:
+                    self.language_server.show_message(
+                        str(e),
+                        MessageType.Error,
+                    )
 
         for name, analyser in old_analysers.items():
             if name not in self.analysers:
                 analyser.close()
-
-    def _get_analyser_class(self, name):
-        try:
-            module = importlib.import_module('{}.{}'.format(
-                analysers.__name__,
-                name
-            ))
-        except ModuleNotFoundError:
-            self.language_server.show_message(
-                f'Unsupported analyser: {name}',
-                MessageType.Error,
-            )
-            return None
-
-        cls = None
-        for cls_name, obj in inspect.getmembers(
-                sys.modules[module.__name__],
-                inspect.isclass
-        ):
-            if issubclass(obj, Analyser):
-                if cls is None:
-                    cls = obj
-                else:
-                    self.language_server.show_message(
-                        f'There are multiple implementations of {name}. We use'
-                        'the first one. This is an implementation error.'
-                        'Please report this issue!',
-                        MessageType.Error,
-                    )
-                    break
-
-        if cls is None:
-            self.language_server.show_message(
-                f'There is no implementation of {name}. We use the first one.'
-                'This is an implementation error. Please report this issue!',
-                MessageType.Error,
-            )
-
-        return cls
 
     async def _submit_task(self, function, *args, **kwargs):
         functions = list()

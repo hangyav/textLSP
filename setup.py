@@ -29,5 +29,6 @@ setup(
         'lsprotocol',
         'pygls',
         'language-tool-python',
+        'tree_sitter',
     ],
 )
