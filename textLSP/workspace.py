@@ -2,20 +2,55 @@ import logging
 
 from typing import Optional
 
+from lsprotocol.types import Range, Position
 from pygls.workspace import Workspace, Document
-from pygls.lsp.types import NumType
 
 logger = logging.getLogger(__name__)
 
 
 class BaseDocument(Document):
     @property
-    def cleaned_source(self):
+    def cleaned_source(self) -> str:
         return self.source
 
     @property
-    def language(self):
+    def cleaned_lines(self):
+        return self.cleaned_source.splitlines(True)
+
+    @property
+    def language(self) -> str:
         return 'en'
+
+    def position_at_offset(self, offset: int, cleaned=False) -> Position:
+        pos = 0
+        lines = self.cleaned_lines if cleaned else self.lines
+        for lidx, line in enumerate(lines):
+            line_len = len(line)
+            if pos + line_len > offset:
+                return Position(
+                    line=lidx,
+                    character=offset-pos
+                )
+            pos += line_len
+
+    def range_at_offset(self, offset: int, length: int, cleaned=False) -> Range:
+        start = self.position_at_offset(offset)
+        if start is None:
+            return None
+
+        length = start.character + length
+        lines = self.cleaned_lines if cleaned else self.lines
+        for lidx, line in enumerate(lines[start.line:], start.line):
+            line_len = len(line)
+            if line_len > length:
+                return Range(
+                    start=start,
+                    end=Position(
+                        line=lidx,
+                        character=length
+                    )
+                )
+            length -= line_len
 
 
 class DocumentTypeFactory():
@@ -23,7 +58,7 @@ class DocumentTypeFactory():
     def get_document(
         doc_uri: str,
         source: Optional[str] = None,
-        version: Optional[NumType] = None,
+        version: Optional[int] = None,
         language_id: Optional[str] = None,
         sync_kind=None,
     ) -> Document:
@@ -43,7 +78,7 @@ class TextLSPWorkspace(Workspace):
         self,
         doc_uri: str,
         source: Optional[str] = None,
-        version: Optional[NumType] = None,
+        version: Optional[int] = None,
         language_id: Optional[str] = None,
     ) -> Document:
         return DocumentTypeFactory.get_document(

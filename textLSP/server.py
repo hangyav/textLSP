@@ -3,19 +3,20 @@ import pkg_resources
 
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol, lsp_method
-from pygls.lsp.methods import INITIALIZE
-from pygls.lsp.types import InitializeParams, InitializeResult
 from lsprotocol.types import (
     TEXT_DOCUMENT_DID_OPEN,
     TEXT_DOCUMENT_DID_CHANGE,
     TEXT_DOCUMENT_DID_CLOSE,
     WORKSPACE_DID_CHANGE_CONFIGURATION,
+    INITIALIZE,
 )
 from lsprotocol.types import (
         DidOpenTextDocumentParams,
         DidChangeTextDocumentParams,
         DidChangeConfigurationParams,
         DidCloseTextDocumentParams,
+        InitializeParams,
+        InitializeResult
 )
 from .workspace import TextLSPWorkspace
 from .utils import merge_dicts

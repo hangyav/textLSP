@@ -42,7 +42,7 @@ class AnalyserHandler():
             else:
                 cls = self._get_analyser_class(name)
                 if cls is not None:
-                    self.analysers[name] = cls(config)
+                    self.analysers[name] = cls(self.language_server, config)
 
         for name, analyser in old_analysers.items():
             if name not in self.analysers:
@@ -95,13 +95,43 @@ class AnalyserHandler():
                     function(name, analyser, *args, **kwargs)
                 )
             )
+
+        if len(functions) == 0:
+            return
+
         await asyncio.wait(functions)
 
+    async def _did_open(
+        self,
+        analyser_name: str,
+        analyser: Analyser,
+        params: DidOpenTextDocumentParams,
+    ):
+        analyser.did_open(
+            params,
+        )
+
     async def did_open(self, params: DidOpenTextDocumentParams):
-        self.language_server.show_message('Text Document Did Open')
+        await self._submit_task(
+            self._did_open,
+            params=params
+        )
+
+    async def _did_change(
+        self,
+        analyser_name: str,
+        analyser: Analyser,
+        params: DidChangeTextDocumentParams,
+    ):
+        analyser.did_change(
+            params,
+        )
 
     async def did_change(self, params: DidChangeTextDocumentParams):
-        self.language_server.show_message('Text Document Did Change')
+        await self._submit_task(
+            self._did_change,
+            params=params
+        )
 
     async def _did_close(
         self,
@@ -110,8 +140,7 @@ class AnalyserHandler():
         params: DidCloseTextDocumentParams
     ):
         analyser.did_close(
-            self.language_server.workspace,
-            self.language_server.workspace.get_document(params.text_document.uri),
+            params,
         )
 
     async def did_close(self, params: DidCloseTextDocumentParams):
