@@ -26,9 +26,17 @@ setup(
         'console_scripts': ['textlsp=textLSP.cli:main'],
     },
     install_requires=[
-        'lsprotocol',
-        'pygls',
-        'language-tool-python',
-        'tree_sitter',
+        'pygls>=1.0.0',
+        'lsprotocol>=2022.0.0a9',
+        'language-tool-python>=2.7.1',
+        'tree_sitter>=0.20.1',
+        'portion>=2.3.0',
+        'gitpython>=3.1.29',
+        'appdirs>=1.4.4',
     ],
+    extras_require={
+        'dev': [
+            'pytest',
+        ]
+    },
 )

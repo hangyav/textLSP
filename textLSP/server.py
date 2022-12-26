@@ -1,5 +1,4 @@
 import logging
-import pkg_resources
 
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol, lsp_method
@@ -19,7 +18,7 @@ from lsprotocol.types import (
         InitializeResult
 )
 from .workspace import TextLSPWorkspace
-from .utils import merge_dicts
+from .utils import merge_dicts, get_textlsp_version
 from .analysers.handler import AnalyserHandler
 
 
@@ -68,7 +67,7 @@ class TextLSPLanguageServer(LanguageServer):
 
 SERVER = TextLSPLanguageServer(
     name='textLSP',
-    version=pkg_resources.require('textLSP')[0].version,
+    version=get_textlsp_version(),
     protocol_cls=TextLSPLanguageServerProtocol,
 )
 

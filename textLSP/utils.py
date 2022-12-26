@@ -1,9 +1,12 @@
 import sys
 import importlib
 import inspect
+import pkg_resources
 
 from functools import wraps
 from threading import RLock
+from git import Repo
+from appdirs import user_cache_dir
 
 
 def merge_dicts(dict1, dict2):
@@ -20,7 +23,7 @@ def get_class(name, cls_type, return_multi=False):
         module = importlib.import_module(name)
     except ModuleNotFoundError:
         raise ModuleNotFoundError(
-            f'Unsupported analyser: {name}',
+            f'Unsupported module: {name}',
         )
 
     cls_lst = list()
@@ -53,3 +56,21 @@ def synchronized(wrapped):
         with lock:
             return wrapped(*args, **kwargs)
     return _wrapper
+
+
+def git_clone(url, dir):
+    return Repo.clone_from(url=url, to_path=dir)
+
+
+def get_textlsp_name():
+    return 'textLSP'
+
+
+def get_textlsp_version():
+    pkg_resources.require(get_textlsp_name())[0].version
+
+
+def get_user_cache(app_name=None):
+    if app_name is None:
+        app_name = get_textlsp_name()
+    return user_cache_dir(app_name)

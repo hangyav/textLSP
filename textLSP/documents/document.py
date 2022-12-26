@@ -1,12 +1,14 @@
 import logging
+import tempfile
+import portion as P
 
 from typing import Optional
 
 from lsprotocol.types import Range, Position, TextDocumentContentChangeEvent
 from pygls.workspace import Document
-from tree_sitter import Language, Parser
+from tree_sitter import Language, Parser, Tree, Node
 
-from ..utils import get_class, synchronized
+from ..utils import get_class, synchronized, git_clone, get_user_cache
 from .. import documents
 
 logger = logging.getLogger(__name__)
@@ -65,7 +67,7 @@ class CleanableDocument(BaseDocument):
 
     @property
     def cleaned_source(self) -> str:
-        if self._cleaned_source is not None:
+        if self._cleaned_source is None:
             self._sync_clean_source()
         return self._cleaned_source
 
@@ -80,52 +82,114 @@ class CleanableDocument(BaseDocument):
 
     def apply_change(self, change: TextDocumentContentChangeEvent) -> None:
         super().apply_change(change)
-        self._clean_source = None
+        self._cleaned_source = None
 
 
 class TreeSitterDocument(CleanableDocument):
-    LIB_PATH_TEMPLATE = 'build/{}.so'
+    LIB_PATH_TEMPLATE = '{}/treesitter/{}.so'.format(get_user_cache(), '{}')
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, language_name, grammar_url, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._parser = TreeSitterDocument.get_parser(language_name, grammar_url)
+        self._text_intervals = None
 
     @staticmethod
     def build_library(name, url) -> None:
-        # TODO git checkout parser repo
-        Language.build_library(
-            TreeSitterDocument.LIB_PATH_TEMPLATE.format(name),
-            [url]
-        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_clone(url, tmpdir)
+            Language.build_library(
+                TreeSitterDocument.LIB_PATH_TEMPLATE.format(name),
+                [tmpdir]
+            )
 
     @staticmethod
-    def get_parser(name) -> Parser:
+    def get_parser(name, url) -> Parser:
         parser = Parser()
-        parser.set_language(
-            Language(
-                TreeSitterDocument.LIB_PATH_TEMPLATE.format(name),
-                name,
+        try:
+            parser.set_language(
+                Language(
+                    TreeSitterDocument.LIB_PATH_TEMPLATE.format(name),
+                    name,
+                )
             )
-        )
+        except Exception:
+            TreeSitterDocument.build_library(name, url)
+            parser.set_language(
+                Language(
+                    TreeSitterDocument.LIB_PATH_TEMPLATE.format(name),
+                    name,
+                )
+            )
         return parser
 
     def _clean_source(self):
-        # TODO build the parse tree with
-        # intervals lib: https://github.com/AlexandreDecan/portion
-        # use the iterate nodes to get elements
-        raise NotImplementedError()
+        # FIXME: comments and cleaner interface
+        tree = self._parser.parse(bytes(self.source, 'utf-8'))
+        self._text_intervals = P.IntervalDict()
 
-    def _iterate_text_nodes(self):
+        last_pos = (0, 0)
+        offset = 0
+        for node in self._iterate_text_nodes(tree):
+            while node.start_point[0] > last_pos[0]:
+                last_pos_tmp = last_pos
+                last_pos = (last_pos[0], last_pos[1]+1)
+                self._text_intervals[P.closed(offset, offset+1)] = (last_pos_tmp, last_pos, offset, '\n')
+                offset += 1
+                last_pos = (last_pos[0]+1, 0)
+
+            if last_pos[1] > 0:
+                last_pos_tmp = last_pos
+                last_pos = (last_pos[0], last_pos[1]+1)
+                self._text_intervals[P.closed(offset, offset+1)] = (last_pos_tmp, last_pos, offset, ' ')
+                offset += 1
+                last_pos = (last_pos[0], last_pos[1]+1)
+
+            text = node.text.decode('utf-8')
+            node_len = len(text)
+            last_pos_tmp = node.start_point
+            last_pos = node.end_point
+            self._text_intervals[P.closed(offset, offset+node_len)] = (last_pos_tmp, last_pos, offset, text)
+            offset += node_len
+            last_pos = (last_pos[0], last_pos[1]+1)
+
+        self._cleaned_source = ''.join(v[3] for _, v in self._text_intervals.items())
+
+    def _iterate_text_nodes(self, tree: Tree) -> Node:
         raise NotImplementedError()
 
     def position_at_offset(self, offset: int, cleaned=False) -> Position:
         if not cleaned:
-            return super().position_at_offset(offset, False)
-        raise NotImplementedError()
+            return super().position_at_offset(offset, cleaned)
+
+        item = self._text_intervals[offset]
+        assert offset >= item[2]
+        diff = offset - item[2]
+
+        return Position(
+            line=item[0][0],
+            character=item[0][1]+diff,
+        )
 
     def range_at_offset(self, offset: int, length: int, cleaned=False) -> Range:
         if not cleaned:
-            return super().range_at_offset(offset, length, False)
-        raise NotImplementedError()
+            return super().range_at_offset(offset, length, cleaned)
+
+        start = self.position_at_offset(offset, cleaned)
+        offset += length
+        item = self._text_intervals[offset]
+        item_end = item[2] + item[1][1]-item[0][1]
+        assert offset <= item_end
+        diff = item_end - offset
+
+        end = Position(
+            line=item[1][0],
+            character=item[1][1]-diff,
+        )
+
+        return Range(
+            start=start,
+            end=end,
+        )
 
 
 class DocumentTypeFactory():
@@ -161,7 +225,7 @@ class DocumentTypeFactory():
                 language_id=language_id,
                 sync_kind=sync_kind
             )
-        except ImportError:
+        except ImportError as e:
             return BaseDocument(
                 uri=doc_uri,
                 source=source,

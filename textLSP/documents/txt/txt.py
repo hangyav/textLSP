@@ -1,4 +1,4 @@
-from .document import BaseDocument
+from ..document import BaseDocument
 
 
 class TxtDocument(BaseDocument):

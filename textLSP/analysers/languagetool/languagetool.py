@@ -29,13 +29,15 @@ class LanguageToolAnalyser(Analyser):
     def did_open(self, params: DidOpenTextDocumentParams):
         diagnostics = list()
         doc = self.get_document(params)
-        matches = self._get_tool_for_language(doc.language).check(doc.cleaned_source)
+        source = doc.cleaned_source
+        matches = self._get_tool_for_language(doc.language).check(source)
 
         for match in matches:
+            token = source[match.offset:match.offset+match.errorLength]
             diagnostics.append(
                 Diagnostic(
-                    range=doc.range_at_offset(match.offset, match.errorLength),
-                    message=match.message,
+                    range=doc.range_at_offset(match.offset, match.errorLength, True),
+                    message=f'"{token}": {match.message}',
                     source='languagetool',
                     severity=self.get_severity(),
                     code=match.ruleId,
@@ -65,6 +67,7 @@ class LanguageToolAnalyser(Analyser):
     def close(self):
         for lang, tool in self.tools.items():
             tool.close()
+        self.tool = dict()
 
     def _get_mapped_language(self, language):
         return LANGUAGE_MAP[language]
