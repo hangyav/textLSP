@@ -2,7 +2,8 @@ import logging
 import tempfile
 import portion as P
 
-from typing import Optional
+from typing import Optional, Generator
+from dataclasses import dataclass
 
 from lsprotocol.types import Range, Position, TextDocumentContentChangeEvent
 from pygls.workspace import Document
@@ -85,6 +86,40 @@ class CleanableDocument(BaseDocument):
         self._cleaned_source = None
 
 
+@dataclass
+class TextNode():
+    text: str
+    start_point: tuple
+    end_point: tuple
+
+    @staticmethod
+    def from_ts_node(node: Node):
+        return TextNode(
+            text=node.text.decode('utf-8'),
+            start_point=node.start_point,
+            end_point=node.end_point,
+        )
+
+    @staticmethod
+    def space(start_point: tuple, end_point: tuple):
+        return TextNode(
+            text=' ',
+            start_point=start_point,
+            end_point=end_point,
+        )
+
+    @staticmethod
+    def new_line(start_point: tuple, end_point: tuple):
+        return TextNode(
+            text='\n',
+            start_point=start_point,
+            end_point=end_point,
+        )
+
+    def __len__(self):
+        return len(self.text)
+
+
 class TreeSitterDocument(CleanableDocument):
     LIB_PATH_TEMPLATE = '{}/treesitter/{}.so'.format(get_user_cache(), '{}')
 
@@ -123,38 +158,23 @@ class TreeSitterDocument(CleanableDocument):
         return parser
 
     def _clean_source(self):
-        # FIXME: comments and cleaner interface
         tree = self._parser.parse(bytes(self.source, 'utf-8'))
         self._text_intervals = P.IntervalDict()
 
-        last_pos = (0, 0)
         offset = 0
         for node in self._iterate_text_nodes(tree):
-            while node.start_point[0] > last_pos[0]:
-                last_pos_tmp = last_pos
-                last_pos = (last_pos[0], last_pos[1]+1)
-                self._text_intervals[P.closed(offset, offset+1)] = (last_pos_tmp, last_pos, offset, '\n')
-                offset += 1
-                last_pos = (last_pos[0]+1, 0)
-
-            if last_pos[1] > 0:
-                last_pos_tmp = last_pos
-                last_pos = (last_pos[0], last_pos[1]+1)
-                self._text_intervals[P.closed(offset, offset+1)] = (last_pos_tmp, last_pos, offset, ' ')
-                offset += 1
-                last_pos = (last_pos[0], last_pos[1]+1)
-
-            text = node.text.decode('utf-8')
-            node_len = len(text)
-            last_pos_tmp = node.start_point
-            last_pos = node.end_point
-            self._text_intervals[P.closed(offset, offset+node_len)] = (last_pos_tmp, last_pos, offset, text)
+            node_len = len(node)
+            self._text_intervals[P.closed(offset, offset+node_len)] = (
+                node.start_point,
+                node.end_point,
+                offset,
+                node.text
+            )
             offset += node_len
-            last_pos = (last_pos[0], last_pos[1]+1)
 
         self._cleaned_source = ''.join(v[3] for _, v in self._text_intervals.items())
 
-    def _iterate_text_nodes(self, tree: Tree) -> Node:
+    def _iterate_text_nodes(self, tree: Tree) -> Generator[TextNode, None, None]:
         raise NotImplementedError()
 
     def position_at_offset(self, offset: int, cleaned=False) -> Position:
@@ -178,7 +198,7 @@ class TreeSitterDocument(CleanableDocument):
         offset += length
         item = self._text_intervals[offset]
         item_end = item[2] + item[1][1]-item[0][1]
-        assert offset <= item_end
+        assert offset <= item_end, f'{offset}, {item_end}, {item}'
         diff = item_end - offset
 
         end = Position(

@@ -3,21 +3,81 @@ import pytest
 from textLSP.documents.latex import LatexDocument
 
 
-def test_latex_clean1():
-    source = """\\documentclass[11pt]{article}
-    \\begin{document}
-
-    \\section{Introduction}
-
-    This is a sentence.
-
-    \\end{document}"""
-
-    expected = "11pt\ndocument\n\nIntroduction\n\nThis is a sentence.\n\ndocument"
-
+@pytest.mark.parametrize('src,clean', [
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n'
+        '\\end{document}',
+        'Introduction\n'
+        '\n'
+        'This is a sentence.'
+    ),
+    (
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a \\textbf{sentence}.',
+        'Introduction\n'
+        '\n'
+        'This is a sentence.'
+    ),
+    (
+        '\\paragraph{Introduction}\n'
+        '\n'
+        'This is a \\textbf{sentence}.',
+        'Introduction\n'
+        '\n'
+        'This is a sentence.'
+    ),
+    (
+        '\\subsection{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\\begin{itemize}\n'
+        '    \\item Item 1\n'
+        '    \\item Item 2\n'
+        '\\end{itemize}',
+        'Introduction\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n'
+        'Item 1\n'
+        '\n'
+        '\n'
+        '\n'
+        'Item 2\n'
+        '\n'
+    ),
+    (
+        '\\section{Introduction}\n'
+        'This is a \n'
+        '# comment\n'
+        'sentence.\n',
+        'Introduction\n'
+        '\n'
+        'This is a sentence.'
+    ),
+    (
+        '\\section{Introduction}\n'
+        'This is a \n'
+        '# comment\n'
+        '\n'
+        'sentence.\n',
+        'Introduction\n'
+        '\n'
+        'This is a\n'
+        '\n'
+        'sentence.'
+    ),
+])
+def test_latex_clean(src, clean):
     doc = LatexDocument(
         'tmp.tex',
-        source,
+        src,
     )
 
-    assert doc.cleaned_source == expected
+    assert doc.cleaned_source == clean
