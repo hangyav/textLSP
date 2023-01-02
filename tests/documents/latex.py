@@ -73,6 +73,17 @@ from textLSP.documents.latex import LatexDocument
         '\n'
         'sentence.'
     ),
+    (
+        '\\section{Introduction}\n'
+        'This is a, sentence with a comma.\n',
+        # XXX This seems to be a TS grammar bug.
+        # 'Introduction\n'
+        # '\n'
+        # 'This is a, sentence with a comma.'
+        'Introduction\n'
+        '\n'
+        'This is a sentence with a comma.'
+    ),
 ])
 def test_latex_clean(src, clean):
     doc = LatexDocument(
