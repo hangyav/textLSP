@@ -6,12 +6,14 @@ from lsprotocol.types import (
     TEXT_DOCUMENT_DID_OPEN,
     TEXT_DOCUMENT_DID_CHANGE,
     TEXT_DOCUMENT_DID_CLOSE,
+    TEXT_DOCUMENT_DID_SAVE,
     WORKSPACE_DID_CHANGE_CONFIGURATION,
     INITIALIZE,
 )
 from lsprotocol.types import (
         DidOpenTextDocumentParams,
         DidChangeTextDocumentParams,
+        DidSaveTextDocumentParams,
         DidChangeConfigurationParams,
         DidCloseTextDocumentParams,
         InitializeParams,
@@ -35,13 +37,33 @@ class TextLSPLanguageServerProtocol(LanguageServerProtocol):
 
 
 class TextLSPLanguageServer(LanguageServer):
+    # TODO make a config class for easier settings hangling and option for
+    # settings keys such as textLSP.check_text.on_edit
     CONFIGURATION_SECTION = 'textLSP'
     CONFIGURATION_ANALYSERS = 'analysers'
+    # TODO make this configurable per analyser as well
+    CONFIGURATION_CHECK = 'check_text'
+    CONFIGURATION_CHECK_ON_OPEN = 'on_open'
+    CONFIGURATION_CHECK_ON_EDIT = 'on_edit'
+    CONFIGURATION_CHECK_ON_SAVE = 'on_save'
+
+    SETTINGS_DEFAULT_CHECK_ON_OPEN = True
+    SETTINGS_DEFAULT_CHECK_ON_EDIT = False
+    SETTINGS_DEFAULT_CHECK_ON_SAVE = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.settings = dict()
+        self.init_settings()
         self.analyser_handler = AnalyserHandler(self)
+
+    def init_settings(self):
+        self.settings.setdefault(self.CONFIGURATION_SECTION, dict())
+        self.settings[self.CONFIGURATION_SECTION].setdefault(self.CONFIGURATION_ANALYSERS, None)
+        self.settings[self.CONFIGURATION_SECTION].setdefault(self.CONFIGURATION_CHECK, dict())
+        self.settings[self.CONFIGURATION_SECTION][self.CONFIGURATION_CHECK].setdefault(self.CONFIGURATION_CHECK_ON_OPEN, self.SETTINGS_DEFAULT_CHECK_ON_OPEN)
+        self.settings[self.CONFIGURATION_SECTION][self.CONFIGURATION_CHECK].setdefault(self.CONFIGURATION_CHECK_ON_EDIT, self.SETTINGS_DEFAULT_CHECK_ON_EDIT)
+        self.settings[self.CONFIGURATION_SECTION][self.CONFIGURATION_CHECK].setdefault(self.CONFIGURATION_CHECK_ON_SAVE, self.SETTINGS_DEFAULT_CHECK_ON_SAVE)
 
     def get_analyser_settings(self, settings=None):
         if settings is None:
@@ -74,12 +96,27 @@ SERVER = TextLSPLanguageServer(
 
 @SERVER.feature(TEXT_DOCUMENT_DID_OPEN)
 async def did_open(ls, params: DidOpenTextDocumentParams):
-    await ls.analyser_handler.did_open(params)
+    if ls.settings[ls.CONFIGURATION_SECTION][ls.CONFIGURATION_CHECK][ls.CONFIGURATION_CHECK_ON_OPEN]:
+        await ls.analyser_handler.did_open(params)
 
 
 @SERVER.feature(TEXT_DOCUMENT_DID_CHANGE)
 async def did_change(ls, params: DidChangeTextDocumentParams):
-    await ls.analyser_handler.did_change(params)
+    if ls.settings[ls.CONFIGURATION_SECTION][ls.CONFIGURATION_CHECK][ls.CONFIGURATION_CHECK_ON_EDIT]:
+        await ls.analyser_handler.did_change(params)
+
+
+@SERVER.feature(TEXT_DOCUMENT_DID_SAVE)
+async def did_save(ls, params: DidSaveTextDocumentParams):
+    if (
+            not ls.settings[ls.CONFIGURATION_SECTION][ls.CONFIGURATION_CHECK][ls.CONFIGURATION_CHECK_ON_EDIT]
+            and ls.settings[ls.CONFIGURATION_SECTION][ls.CONFIGURATION_CHECK][ls.CONFIGURATION_CHECK_ON_SAVE]
+    ):
+        # TODO this is a bit wasteful. We should only check changed parts
+        # similar to did_change
+        await ls.analyser_handler.did_open(
+            DidOpenTextDocumentParams(params.text_document)
+        )
 
 
 @SERVER.feature(TEXT_DOCUMENT_DID_CLOSE)
