@@ -2,11 +2,15 @@ import sys
 import importlib
 import inspect
 import pkg_resources
+import re
 
 from functools import wraps
 from threading import RLock
 from git import Repo
 from appdirs import user_cache_dir
+
+
+TEXT_PASSAGE_PATTERN = re.compile('[.?!] |\\n')
 
 
 def merge_dicts(dict1, dict2):
@@ -74,3 +78,28 @@ def get_user_cache(app_name=None):
     if app_name is None:
         app_name = get_textlsp_name()
     return user_cache_dir(app_name)
+
+
+class ConfigurationError(Exception):
+    pass
+
+
+def batch_text(text: str, pattern: re.Pattern, max_size: int, min_size: int = 0):
+    sidx = 0
+    eidx = max_size
+    text_len = len(text)
+    while eidx <= text_len:
+        matches = list(
+            pattern.finditer(
+                text[sidx:eidx]
+            )
+        )
+        if len(matches) > 0 and matches[-1].end() > min_size:
+            eidx = sidx + matches[-1].end()
+
+        yield text[sidx:eidx]
+        sidx = eidx
+        eidx = sidx + max_size
+
+    if sidx <= text_len:
+        yield text[sidx:text_len]

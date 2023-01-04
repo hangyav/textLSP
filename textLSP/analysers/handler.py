@@ -7,10 +7,11 @@ from lsprotocol.types import (
         DidChangeTextDocumentParams,
         DidCloseTextDocumentParams,
 )
+from pygls.workspace import Document
 
 from .. import analysers
-from .analyser import Analyser
-from ..utils import get_class
+from .analyser import Analyser, AnalysisError
+from ..utils import get_class, ConfigurationError
 
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class AnalyserHandler():
         old_analysers = self.analysers
         self.analysers = dict()
         for name, config in settings.items():
-            if not config.setdefault('enabled', True):
+            if not config.setdefault('enabled', False):
                 continue
             if name in old_analysers:
                 analyser = old_analysers[name]
@@ -48,10 +49,18 @@ class AnalyserHandler():
                         str(e),
                         MessageType.Error,
                     )
+                except ConfigurationError as e:
+                    self.language_server.show_message(
+                        str(e),
+                        MessageType.Error,
+                    )
 
         for name, analyser in old_analysers.items():
             if name not in self.analysers:
                 analyser.close()
+
+    def get_diagnostics(self, doc: Document):
+        return [analyser.get_diagnostics(doc) for analyser in self.analysers.values()]
 
     async def _submit_task(self, function, *args, **kwargs):
         functions = list()
@@ -73,9 +82,15 @@ class AnalyserHandler():
         analyser: Analyser,
         params: DidOpenTextDocumentParams,
     ):
-        analyser.did_open(
-            params,
-        )
+        try:
+            analyser.did_open(
+                params,
+            )
+        except AnalysisError as e:
+            self.language_server.show_message(
+                str(f'{analyser_name}: {e}'),
+                MessageType.Error,
+            )
 
     async def did_open(self, params: DidOpenTextDocumentParams):
         await self._submit_task(
@@ -89,9 +104,15 @@ class AnalyserHandler():
         analyser: Analyser,
         params: DidChangeTextDocumentParams,
     ):
-        analyser.did_change(
-            params,
-        )
+        try:
+            analyser.did_change(
+                params,
+            )
+        except AnalysisError as e:
+            self.language_server.show_message(
+                str(f'{analyser_name}: {e}'),
+                MessageType.Error,
+            )
 
     async def did_change(self, params: DidChangeTextDocumentParams):
         await self._submit_task(

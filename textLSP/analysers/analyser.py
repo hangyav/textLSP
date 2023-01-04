@@ -1,8 +1,11 @@
+from typing import List
 from pygls.server import LanguageServer
+from pygls.workspace import Document
 from lsprotocol.types import (
         DidOpenTextDocumentParams,
         DidChangeTextDocumentParams,
         DidCloseTextDocumentParams,
+        Diagnostic,
         DiagnosticSeverity,
 )
 
@@ -18,6 +21,7 @@ class Analyser():
         self.language_server = language_server
         self.config = dict()
         self.update_settings(config)
+        self._diagnostics_dict = dict()
 
     def did_open(self, params: DidOpenTextDocumentParams):
         raise NotImplementedError()
@@ -48,3 +52,17 @@ class Analyser():
             except KeyError:
                 pass
         return self.default_severity
+
+    def init_diagnostics(self, doc: Document):
+        self._diagnostics_dict[doc.uri] = list()
+
+    def get_diagnostics(self, doc: Document):
+        return self._diagnostics_dict.get(doc.uri, list())
+
+    def add_diagnostics(self, doc: Document, diagnostics: List[Diagnostic]):
+        self._diagnostics_dict[doc.uri] += diagnostics
+        self.language_server.publish_stored_diagnostics(doc)
+
+
+class AnalysisError(Exception):
+    pass

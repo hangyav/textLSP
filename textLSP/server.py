@@ -2,6 +2,7 @@ import logging
 
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol, lsp_method
+from pygls.workspace import Document
 from lsprotocol.types import (
     TEXT_DOCUMENT_DID_OPEN,
     TEXT_DOCUMENT_DID_CHANGE,
@@ -17,7 +18,7 @@ from lsprotocol.types import (
         DidChangeConfigurationParams,
         DidCloseTextDocumentParams,
         InitializeParams,
-        InitializeResult
+        InitializeResult,
 )
 from .workspace import TextLSPWorkspace
 from .utils import merge_dicts, get_textlsp_version
@@ -28,6 +29,9 @@ logger = logging.getLogger(__name__)
 
 
 class TextLSPLanguageServerProtocol(LanguageServerProtocol):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     @lsp_method(INITIALIZE)
     def lsp_initialize(self, params: InitializeParams) -> InitializeResult:
         result = super().lsp_initialize(params)
@@ -85,6 +89,12 @@ class TextLSPLanguageServer(LanguageServer):
             self.analyser_handler.update_settings(
                     self.get_analyser_settings()
             )
+
+    def publish_stored_diagnostics(self, doc: Document):
+        diagnostics = list()
+        for lst in self.analyser_handler.get_diagnostics(doc):
+            diagnostics.extend(lst)
+        self.publish_diagnostics(doc.uri, diagnostics)
 
 
 SERVER = TextLSPLanguageServer(

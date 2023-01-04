@@ -27,24 +27,29 @@ class LanguageToolAnalyser(Analyser):
         self.tools = dict()
 
     def did_open(self, params: DidOpenTextDocumentParams):
-        diagnostics = list()
         doc = self.get_document(params)
+        self.init_diagnostics(doc)
+        diagnostics = list()
         source = doc.cleaned_source
         matches = self._get_tool_for_language(doc.language).check(source)
 
         for match in matches:
             token = source[match.offset:match.offset+match.errorLength]
+            replacements = ''
+            if len(match.replacements) > 0:
+                replacements = ', '.join(item for item in match.replacements)
+                replacements = f' -> {replacements}'
             diagnostics.append(
                 Diagnostic(
                     range=doc.range_at_offset(match.offset, match.errorLength, True),
-                    message=f'"{token}": {match.message}',
+                    message=f'"{token}"{replacements}: {match.message}',
                     source='languagetool',
                     severity=self.get_severity(),
-                    code=match.ruleId,
+                    code=f'languagetool:{match.ruleId}',
                 )
             )
 
-        self.language_server.publish_diagnostics(doc.uri, diagnostics)
+        self.add_diagnostics(doc, diagnostics)
 
     def did_change(self, params: DidChangeTextDocumentParams):
         # TODO
