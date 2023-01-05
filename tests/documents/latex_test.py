@@ -84,6 +84,26 @@ from textLSP.documents.latex import LatexDocument
         '\n'
         'This is a sentence with a comma.'
     ),
+    (
+        '\\section{Introduction}\n'
+        '\n'
+        '\\subsection{Subsection}\n'
+        '\n'
+        '\\paragraph{Paragraph}\n'
+        '\n'
+        'This is a \\textbf{sentence}.',
+        'Introduction\n'
+        '\n'
+        '\n'
+        '\n'
+        'Subsection\n'
+        '\n'
+        '\n'
+        '\n'
+        'Paragraph\n'
+        '\n'
+        'This is a sentence.'
+    ),
 ])
 def test_latex_clean(src, clean):
     doc = LatexDocument(

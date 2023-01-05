@@ -30,7 +30,6 @@ setup(
         'lsprotocol>=2022.0.0a9',
         'language-tool-python>=2.7.1',
         'tree_sitter>=0.20.1',
-        'portion>=2.3.0',
         'gitpython>=3.1.29',
         'appdirs>=1.4.4',
     ],

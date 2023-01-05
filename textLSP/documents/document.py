@@ -1,6 +1,6 @@
 import logging
 import tempfile
-import portion as P
+import bisect
 
 from typing import Optional, Generator
 from dataclasses import dataclass
@@ -125,7 +125,12 @@ class TreeSitterDocument(CleanableDocument):
 
     def __init__(self, language_name, grammar_url, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._parser = TreeSitterDocument.get_parser(language_name, grammar_url)
+        self._language = TreeSitterDocument.get_language(language_name, grammar_url)
+        self._parser = TreeSitterDocument.get_parser(
+            language_name,
+            grammar_url,
+            self._language
+        )
         self._text_intervals = None
 
     @staticmethod
@@ -138,50 +143,82 @@ class TreeSitterDocument(CleanableDocument):
             )
 
     @staticmethod
-    def get_parser(name, url) -> Parser:
-        parser = Parser()
+    def get_language(name, url) -> Language:
         try:
-            parser.set_language(
-                Language(
-                    TreeSitterDocument.LIB_PATH_TEMPLATE.format(name),
-                    name,
-                )
+            return Language(
+                TreeSitterDocument.LIB_PATH_TEMPLATE.format(name),
+                name,
             )
         except Exception:
             TreeSitterDocument.build_library(name, url)
-            parser.set_language(
-                Language(
-                    TreeSitterDocument.LIB_PATH_TEMPLATE.format(name),
-                    name,
-                )
+            return Language(
+                TreeSitterDocument.LIB_PATH_TEMPLATE.format(name),
+                name,
             )
+
+    @staticmethod
+    def get_parser(name, url, language=None) -> Parser:
+        parser = Parser()
+        if language is None:
+            language = TreeSitterDocument.get_language(name, url)
+        parser.set_language(language)
         return parser
 
     def _clean_source(self):
         tree = self._parser.parse(bytes(self.source, 'utf-8'))
-        self._text_intervals = P.IntervalDict()
+        self._text_intervals = {
+            'start': list(),
+            'end': list(),
+            'value': list(),
+        }
 
         offset = 0
         for node in self._iterate_text_nodes(tree):
             node_len = len(node)
-            self._text_intervals[P.closed(offset, offset+node_len)] = (
-                node.start_point,
-                node.end_point,
-                offset,
-                node.text
+            self._text_intervals['start'].append(offset)
+            self._text_intervals['end'].append(offset+node_len-1)
+            self._text_intervals['value'].append(
+                (
+                    node.start_point,
+                    node.end_point,
+                    offset,
+                    node.text
+                )
             )
             offset += node_len
 
-        self._cleaned_source = ''.join(v[3] for _, v in self._text_intervals.items())
+        self._cleaned_source = ''.join(
+            item[3] for item in self._text_intervals['value']
+        )
 
     def _iterate_text_nodes(self, tree: Tree) -> Generator[TextNode, None, None]:
         raise NotImplementedError()
+
+    def _get_idx_at_offset(self, offset: int):
+        if self._text_intervals is None:
+            return None
+
+        min_lst = self._text_intervals['start']
+        max_lst = self._text_intervals['end']
+
+        idx = bisect.bisect_left(max_lst, offset)
+        if idx < len(max_lst) and min_lst[idx] <= offset <= max_lst[idx]:
+            return idx
+
+        return None
+
+    def _get_value_at_offset(self, offset: int):
+        idx = self._get_idx_at_offset(offset)
+        if idx is not None:
+            return self._text_intervals['value'][idx]
+
+        return None
 
     def position_at_offset(self, offset: int, cleaned=False) -> Position:
         if not cleaned:
             return super().position_at_offset(offset, cleaned)
 
-        item = self._text_intervals[offset]
+        item = self._get_value_at_offset(offset)
         assert offset >= item[2]
         diff = offset - item[2]
 
@@ -196,7 +233,7 @@ class TreeSitterDocument(CleanableDocument):
 
         start = self.position_at_offset(offset, cleaned)
         offset += length
-        item = self._text_intervals[offset]
+        item = self._get_value_at_offset(offset-1)
         item_end = item[2] + item[1][1]-item[0][1]
         assert offset <= item_end, f'{offset}, {item_end}, {item}'
         diff = item_end - offset
