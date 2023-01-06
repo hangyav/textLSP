@@ -7,6 +7,7 @@ from lsprotocol.types import (
         DidCloseTextDocumentParams,
         Diagnostic,
         DiagnosticSeverity,
+        Range,
 )
 
 from ..documents.document import BaseDocument
@@ -62,6 +63,13 @@ class Analyser():
     def add_diagnostics(self, doc: Document, diagnostics: List[Diagnostic]):
         self._diagnostics_dict[doc.uri] += diagnostics
         self.language_server.publish_stored_diagnostics(doc)
+
+    def remove_diagnostics_at_rage(self, doc: Document, pos_range: Range):
+        diagnostics = list()
+        for diag in self.get_diagnostics(doc):
+            if diag.range.end < pos_range.start or diag.range.start > pos_range.end:
+                diagnostics.append(diag)
+        self._diagnostics_dict[doc.uri] = diagnostics
 
 
 class AnalysisError(Exception):

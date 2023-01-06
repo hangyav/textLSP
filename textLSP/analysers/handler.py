@@ -11,7 +11,8 @@ from pygls.workspace import Document
 
 from .. import analysers
 from .analyser import Analyser, AnalysisError
-from ..utils import get_class, ConfigurationError
+from ..utils import get_class
+from ..types import ConfigurationError
 
 
 logger = logging.getLogger(__name__)

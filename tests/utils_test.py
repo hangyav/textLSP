@@ -1,6 +1,6 @@
 import pytest
 
-from textLSP import utils
+from textLSP import utils, types
 
 
 @pytest.mark.parametrize('src,exp,max,min', [
@@ -77,6 +77,6 @@ from textLSP import utils
     ),
 ])
 def test_latex_clean(src, exp, max, min):
-    res = list(utils.batch_text(src, utils.TEXT_PASSAGE_PATTERN, max, min))
+    res = list(utils.batch_text(src, types.TEXT_PASSAGE_PATTERN, max, min))
 
     assert res == exp

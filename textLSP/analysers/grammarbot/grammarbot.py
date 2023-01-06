@@ -9,7 +9,8 @@ from lsprotocol.types import (
 from pygls.server import LanguageServer
 
 from ..analyser import Analyser, AnalysisError
-from ...utils import ConfigurationError, batch_text, TEXT_PASSAGE_PATTERN
+from ...utils import batch_text
+from ...types import ConfigurationError, TEXT_PASSAGE_PATTERN
 
 
 logger = logging.getLogger(__name__)

@@ -10,9 +10,6 @@ from git import Repo
 from appdirs import user_cache_dir
 
 
-TEXT_PASSAGE_PATTERN = re.compile('[.?!] |\\n')
-
-
 def merge_dicts(dict1, dict2):
     for key in dict2:
         if key in dict1 and isinstance(dict1[key], dict) and isinstance(dict2[key], dict):
@@ -78,10 +75,6 @@ def get_user_cache(app_name=None):
     if app_name is None:
         app_name = get_textlsp_name()
     return user_cache_dir(app_name)
-
-
-class ConfigurationError(Exception):
-    pass
 
 
 def batch_text(text: str, pattern: re.Pattern, max_size: int, min_size: int = 0):
