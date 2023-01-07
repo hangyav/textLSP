@@ -6,6 +6,7 @@ from lsprotocol.types import (
         DidOpenTextDocumentParams,
         DidChangeTextDocumentParams,
         DidCloseTextDocumentParams,
+        DidSaveTextDocumentParams,
 )
 from pygls.workspace import Document
 
@@ -118,6 +119,28 @@ class AnalyserHandler():
     async def did_change(self, params: DidChangeTextDocumentParams):
         await self._submit_task(
             self._did_change,
+            params=params
+        )
+
+    async def _did_save(
+        self,
+        analyser_name: str,
+        analyser: Analyser,
+        params: DidSaveTextDocumentParams,
+    ):
+        try:
+            analyser.did_save(
+                params,
+            )
+        except AnalysisError as e:
+            self.language_server.show_message(
+                str(f'{analyser_name}: {e}'),
+                MessageType.Error,
+            )
+
+    async def did_save(self, params: DidSaveTextDocumentParams):
+        await self._submit_task(
+            self._did_save,
             params=params
         )
 

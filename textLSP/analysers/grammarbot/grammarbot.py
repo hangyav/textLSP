@@ -3,10 +3,10 @@ import requests
 import urllib.parse
 
 from lsprotocol.types import (
-        DidOpenTextDocumentParams,
         Diagnostic,
 )
 from pygls.server import LanguageServer
+from pygls.workspace import Document
 
 from ..analyser import Analyser, AnalysisError
 from ...utils import batch_text
@@ -38,8 +38,7 @@ class GrammarBotAnalyser(Analyser):
             'X-RapidAPI-Host': 'grammarbot.p.rapidapi.com'
         }
 
-    def did_open(self, params: DidOpenTextDocumentParams):
-        doc = self.get_document(params)
+    def _did_open(self, doc: Document):
         self.init_diagnostics(doc)
         diagnostics = list()
         source = doc.cleaned_source

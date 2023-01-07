@@ -5,14 +5,13 @@ from collections import defaultdict
 from language_tool_python import LanguageTool
 from lsprotocol.types import (
         DidOpenTextDocumentParams,
-        DidChangeTextDocumentParams,
         TextDocumentContentChangeEvent_Type2,
-        DidCloseTextDocumentParams,
         Diagnostic,
         Range,
         Position,
 )
 from pygls.server import LanguageServer
+from pygls.workspace import Document
 
 from ..analyser import Analyser
 
@@ -52,67 +51,65 @@ class LanguageToolAnalyser(Analyser):
 
         return diagnostics
 
-    def did_open(self, params: DidOpenTextDocumentParams):
-        doc = self.get_document(params)
+    def _did_open(self, doc: Document):
         self.init_diagnostics(doc)
         diagnostics = self._analyse(doc.cleaned_source, doc)
         self.add_diagnostics(doc, diagnostics)
 
-    def did_change(self, params: DidChangeTextDocumentParams):
+    def _did_change(self, doc: Document):
         # TODO remove
         self.did_open(DidOpenTextDocumentParams(
-            text_document=params.text_document
+            text_document=doc
         ))
-        return
-        if any(
-            type(item) == TextDocumentContentChangeEvent_Type2
-            for item in params.content_changes
-        ):
-            self.did_open(DidOpenTextDocumentParams(
-                text_document=params.text_document
-            ))
+        # if any(
+        #     type(item) == TextDocumentContentChangeEvent_Type2
+        #     for item in params.content_changes
+        # ):
+        #     self.did_open(DidOpenTextDocumentParams(
+        #         text_document=params.text_document
+        #     ))
+        #
+        # doc = self.get_document(params)
+        # checked = set()
+        # diagnostics = list()
+        # lines = doc.cleaned_lines
+        # # TODO buggy
+        # for change in params.content_changes:
+        #     pos_range = change.range
+        #     # if pos_range.end.line + 1 < len(lines):
+        #     #     end = Position(
+        #     #         line=pos_range.end.line+1,
+        #     #         character=0,
+        #     #     )
+        #     # else:
+        #     #     end = Position(
+        #     #         line=pos_range.end.line,
+        #     #         character=max(0, len(lines[-1])-1),
+        #     #     )
+        #     #
+        #     # pos_range = Range(
+        #     #     start=Position(
+        #     #         line=max(0, pos_range.start.line-1),
+        #     #         character=0,
+        #     #     ),
+        #     #     end=end
+        #     # )
+        #     self.remove_diagnostics_at_rage(doc, pos_range)
+        #     for paragraph in doc.paragraphs_at_range(pos_range, True):
+        #         if paragraph in checked:
+        #             continue
+        #
+        #         diags = self._analyse(
+        #             doc.cleaned_source[paragraph.start:paragraph.start +
+        #                                paragraph.length],
+        #             doc,
+        #             paragraph.start
+        #         )
+        #         diagnostics.extend(diags)
+        #         checked.add(paragraph)
+        # self.add_diagnostics(doc, diagnostics)
 
-        doc = self.get_document(params)
-        checked = set()
-        diagnostics = list()
-        lines = doc.cleaned_lines
-        # TODO buggy
-        for change in params.content_changes:
-            pos_range = change.range
-            # if pos_range.end.line + 1 < len(lines):
-            #     end = Position(
-            #         line=pos_range.end.line+1,
-            #         character=0,
-            #     )
-            # else:
-            #     end = Position(
-            #         line=pos_range.end.line,
-            #         character=max(0, len(lines[-1])-1),
-            #     )
-            #
-            # pos_range = Range(
-            #     start=Position(
-            #         line=max(0, pos_range.start.line-1),
-            #         character=0,
-            #     ),
-            #     end=end
-            # )
-            self.remove_diagnostics_at_rage(doc, pos_range)
-            for paragraph in doc.paragraphs_at_range(pos_range, True):
-                if paragraph in checked:
-                    continue
-
-                diags = self._analyse(
-                    doc.cleaned_source[paragraph.start:paragraph.start +
-                                       paragraph.length],
-                    doc,
-                    paragraph.start
-                )
-                diagnostics.extend(diags)
-                checked.add(paragraph)
-        self.add_diagnostics(doc, diagnostics)
-
-    def did_close(self, params: DidCloseTextDocumentParams):
+    def _did_close(self, doc: Document):
         workspace = self.language_server.workspace
         doc_langs = {
             document.language
