@@ -4,7 +4,12 @@ import tempfile
 from typing import Optional, Generator, List
 from dataclasses import dataclass
 
-from lsprotocol.types import Range, Position, TextDocumentContentChangeEvent
+from lsprotocol.types import (
+    Range,
+    Position,
+    TextDocumentContentChangeEvent,
+    TextDocumentContentChangeEvent_Type2,
+)
 from pygls.workspace import Document, position_from_utf16
 from tree_sitter import Language, Parser, Tree, Node
 
@@ -62,6 +67,14 @@ class BaseDocument(Document):
                 )
             length -= line_len
 
+        return Range(
+            start=start,
+            end=Position(
+                line=len(lines)-1,
+                character=len(lines[-1])-1
+            )
+        )
+
     def offset_at_position(self, position: Position, cleaned=False) -> int:
         # doesn't really matter
         lines = self.cleaned_lines if cleaned else self.lines
@@ -69,7 +82,7 @@ class BaseDocument(Document):
         row, col = pos.line, pos.character
         return col + sum(len(line) for line in lines[:row])
 
-    def paragraph_at_offset(self, offset: int, cleaned=False) -> Interval:
+    def paragraph_at_offset(self, offset: int, min_length=0, cleaned=False) -> Interval:
         """
         returns (start_offset, length)
         """
@@ -82,22 +95,36 @@ class BaseDocument(Document):
         assert end_idx < len_source
 
         while (
-            start_idx > 0
-            and (source[start_idx] != '\n' and source[start_idx-1] != '\n')
+            start_idx >= 0
+            and not (
+                all(source[start_idx-i] == '\n' for i in range(1, min(3, start_idx+1)))
+                or all(source[start_idx-i] == '\n' for i in range(min(2, start_idx+1)))  # empty line
+            )
         ):
             start_idx -= 1
 
-        while (
-            end_idx < len_source-1
-            and (source[end_idx] != '\n' and source[end_idx+1] != '\n')
-        ):
-            end_idx += 1
+        while True:
+            while (
+                end_idx <= len_source-1
+                and not (
+                    all(source[end_idx+i] == '\n' for i in range(min(2, len_source-end_idx)))
+                    or all(source[start_idx-i] == '\n' for i in range(min(2, start_idx+1)))  # empty line
+                )
+            ):
+                end_idx += 1
+
+            if end_idx < len_source-1 and end_idx-start_idx+1 < min_length:
+                end_idx += 1
+            else:
+                break
 
         return Interval(start_idx, end_idx-start_idx+1)
 
     def paragraph_at_position(self, position: Position, cleaned=False) -> Interval:
         offset = self.offset_at_position(position, cleaned)
-        return self.paragraph_at_offset(offset, cleaned)
+        if offset is None:
+            return None
+        return self.paragraph_at_offset(offset, cleaned=cleaned)
 
     def paragraphs_at_range(self, position_range: Range, cleaned=False) -> List[Interval]:
         res = list()
@@ -106,6 +133,8 @@ class BaseDocument(Document):
 
         while position < position_range.end:
             paragraph = self.paragraph_at_position(position, cleaned)
+            if paragraph is None:
+                continue
             res.append(paragraph)
             text = source[paragraph.start:paragraph.start+paragraph.length].splitlines()
             line = position.line+len(text)
@@ -116,6 +145,13 @@ class BaseDocument(Document):
             )
 
         return res
+
+    def last_position(self, cleaned=False):
+        lines = self.cleaned_lines if cleaned else self.lines
+        return Position(
+            line=(len(lines)-1),
+            character=len(lines[-1])-1
+        )
 
 
 class CleanableDocument(BaseDocument):
@@ -152,6 +188,12 @@ class CleanableDocument(BaseDocument):
     def paragraphs_at_range(self, position_range: Range, cleaned=False) -> Interval:
         if not cleaned:
             return super().paragraphs_at_range(position_range, cleaned)
+
+        raise NotImplementedError()
+
+    def last_position(self, cleaned=False):
+        if not cleaned:
+            return super().last_position(cleaned)
 
         raise NotImplementedError()
 
@@ -280,7 +322,6 @@ class TreeSitterDocument(CleanableDocument):
         start = self.position_at_offset(offset, cleaned)
         offset += length
         item = self._text_intervals.get_interval_at_offset(offset-1)
-        # item_end = item.offset_interval.start + item.position_range.end.character-item.position_range.start.character
         item_end = item.offset_interval.start + item.offset_interval.length
         assert offset <= item_end, f'{offset}, {item_end}, {item}'
         diff = item_end - offset
@@ -303,7 +344,9 @@ class TreeSitterDocument(CleanableDocument):
             self._clean_source()
 
         item = self._text_intervals.get_interval_at_position(position)
-        assert item is not None, "This shouldn't happen!"
+        if item is None:
+            return None
+
         assert item.position_range.start.line == position.line, "This shouldn't happen!"
         assert item.position_range.start.character <= position.character
         diff = position.character - item.position_range.start.character
@@ -326,8 +369,12 @@ class TreeSitterDocument(CleanableDocument):
             if interval.position_range.start > position_range.end:
                 break
 
-            paragraph = self.paragraph_at_offset(interval.offset_interval.start, True)
-            if paragraph not in res_set:
+            paragraph = self.paragraph_at_offset(
+                interval.offset_interval.start,
+                min_length=interval.offset_interval.length,
+                cleaned=True
+            )
+            if paragraph is not None and paragraph not in res_set:
                 res.append(paragraph)
                 res_set.add(paragraph)
 
@@ -367,7 +414,7 @@ class DocumentTypeFactory():
                 language_id=language_id,
                 sync_kind=sync_kind
             )
-        except ImportError as e:
+        except ImportError:
             return BaseDocument(
                 uri=doc_uri,
                 source=source,
@@ -377,3 +424,100 @@ class DocumentTypeFactory():
             )
 
 
+class ChangeTracker():
+    def __init__(self, doc: BaseDocument, cleaned=False):
+        self.document = doc
+        self.cleaned = cleaned
+        length = len(doc.cleaned_source) if cleaned else len(doc.source)
+        # list of tuples (span_length, was_changed)
+        # negative span_length means that the span was deleted
+        self._items = [(length, False)]
+        self.full_document_change = False
+
+    def update_document(self, change: TextDocumentContentChangeEvent):
+        if self.full_document_change:
+            return
+
+        if type(change) == TextDocumentContentChangeEvent_Type2:
+            self.full_document_change = True
+            self._items = [(-1, True)]
+            return
+
+        new_lst = list()
+        start_offset = self.document.offset_at_position(
+            change.range.start,
+            self.cleaned,
+        )
+        end_offset = self.document.offset_at_position(
+            change.range.end,
+            self.cleaned,
+        )
+
+        item_idx, item_offset = self._get_offset_idx(start_offset)
+        change_length = len(change.text)
+        range_length = end_offset-start_offset
+        start_offset = start_offset - item_offset
+
+        if start_offset > 0:
+            new_lst.append((start_offset, self._items[item_idx][1]))
+
+        if change_length >= range_length:
+            effective_change_length = change_length
+        else:
+            effective_change_length = change_length-range_length
+        effective_change_length = max(effective_change_length, -1*item_offset)
+        new_lst.append((effective_change_length, True))
+
+        doc_len = len(self.document.cleaned_source) if self.cleaned else len(self.document.source)
+        if end_offset < doc_len:
+            new_lst.append((
+                self._items[item_idx][0]-start_offset-range_length,
+                self._items[item_idx][1]
+            ))
+
+        self._replace_at(item_idx, new_lst)
+
+    def _get_offset_idx(self, offset):
+        pos = 0
+        idx = 0
+
+        while pos <= offset and pos+self._items[idx][0] <= offset:
+            pos += self._items[idx][0]
+            idx += 1
+
+        return idx, pos
+
+    def _replace_at(self, idx, tuples):
+        length = len(tuples)
+        assert length > 0
+        self._items[idx] = tuples[0]
+        for i in range(1, length):
+            self._items.insert(idx+i, tuples[i])
+
+    def get_changes(self) -> List[Interval]:
+        if self.cleaned:
+            doc_length = len(self.document.cleaned_source)
+        else:
+            doc_length = len(self.document.source)
+
+        if self.full_document_change:
+            return [Interval(0, doc_length)]
+
+        res = list()
+        pos = 0
+        for item in self._items:
+            if item[1]:
+                length = item[0]
+                if length < 0:
+                    position = max(0, pos+length)
+                    # use pos instead of position since the doc_length will change after modification
+                    length = min(length*-1, doc_length-pos)
+                else:
+                    position = min(pos, doc_length-1)
+                res.append(Interval(position, length))
+            pos += item[0]
+
+        return res
+
+    def __len__(self):
+        return len([item for item in self._items if item[1]])

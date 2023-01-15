@@ -2,14 +2,22 @@ import logging
 
 from typing import Optional
 
+from lsprotocol.types import (
+    TextDocumentContentChangeEvent,
+    VersionedTextDocumentIdentifier,
+)
 from pygls.workspace import Workspace, Document
 
 from .documents.document import DocumentTypeFactory
+from .analysers.handler import AnalyserHandler
 
 logger = logging.getLogger(__name__)
 
 
 class TextLSPWorkspace(Workspace):
+    def __init__(self, analyser_handler: AnalyserHandler, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.analyser_handler = analyser_handler
 
     def _create_document(
         self,
@@ -27,9 +35,17 @@ class TextLSPWorkspace(Workspace):
         )
 
     @staticmethod
-    def workspace2textlspworkspace(workspace: Workspace):
+    def workspace2textlspworkspace(workspace: Workspace, analyser_handler: AnalyserHandler):
         return TextLSPWorkspace(
-            workspace._root_uri,
-            workspace._sync_kind,
-            [folder for folder in workspace._folders.values()],
+            analyser_handler=analyser_handler,
+            root_uri=workspace._root_uri,
+            sync_kind=workspace._sync_kind,
+            workspace_folders=[folder for folder in workspace._folders.values()],
         )
+
+    def update_document(self,
+                        text_doc: VersionedTextDocumentIdentifier,
+                        change: TextDocumentContentChangeEvent):
+        doc = self._docs[text_doc.uri]
+        self.analyser_handler.update_document(doc, change)
+        super().update_document(text_doc, change)

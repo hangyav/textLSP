@@ -151,7 +151,7 @@ def test_highlight(src, offset, exp):
             line=3,
             character=19,
         ),
-        'Introduction',
+        'Introduction\n',
     ),
     (
         '\\documentclass[11pt]{article}\n'
@@ -166,7 +166,7 @@ def test_highlight(src, offset, exp):
             line=3,
             character=9,  # first char
         ),
-        'Introduction',
+        'Introduction\n',
     ),
     (
         '\\documentclass[11pt]{article}\n'
@@ -181,7 +181,7 @@ def test_highlight(src, offset, exp):
             line=3,
             character=20,  # last char
         ),
-        'Introduction',
+        'Introduction\n',
     ),
     (
         '\\documentclass[11pt]{article}\n'
@@ -196,7 +196,7 @@ def test_highlight(src, offset, exp):
             line=4,
             character=0,
         ),
-        '\n',
+        None,
     ),
     (
         '\\documentclass[11pt]{article}\n'
@@ -213,13 +213,49 @@ def test_highlight(src, offset, exp):
         ),
         'This is a sentence.',
     ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Intraduction}\\subsection{Subsection}\n'
+        '\n'
+        'This is a sentence.\n'
+        'This is anather.\n'
+        '\n'
+        'This is \\textbf{bold}.\n'
+        '\n'
+        'One sentence\n'
+        '% comment\n'
+        '\n'
+        'with words.\n'
+        '\n'
+        'This is a, sentence,\n'
+        '\n'
+        '\\paragraph{Porograph}\n'
+        '\n'
+        '\\begin{itemize}\n'
+        '    \\item item 1\n'
+        '    \\item itam 1\n'
+        '\\end{itemize}\n'
+        '\n'
+        'Apple.\n'
+        '\n'
+        '\\end{document}\n',
+        Position(
+            line=17,
+            character=12,
+        ),
+        'Porograph\n',
+    ),
 ])
-def test_get_paragraph(content, position, exp):
+def test_get_paragraph_at_position(content, position, exp):
     doc = LatexDocument('DUMMY_URL', content)
     pos = doc.paragraph_at_position(position, True)
-    par = doc.cleaned_source[pos.start:pos.start+pos.length]
-
-    assert par == exp
+    if exp is None:
+        assert pos is None
+    else:
+        par = doc.cleaned_source[pos.start:pos.start+pos.length]
+        assert par == exp
 
 
 @pytest.mark.parametrize('content,range,exp', [
@@ -243,8 +279,7 @@ def test_get_paragraph(content, position, exp):
             ),
         ),
         [
-            'Introduction',
-            '\n',
+            'Introduction\n',
             '\n',
             'This is a sentence.',
         ],

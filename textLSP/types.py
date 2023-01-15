@@ -157,6 +157,8 @@ class OffsetPositionIntervalList():
 
     def get_idx_at_position(self, position: Position) -> int:
         idx = bisect.bisect_left(self._position_end_line, position.line)
+        if position.line < self._position_start_line[idx] or position.line > self._position_end_line[idx]:
+            return None
 
         lst = list()
         i = idx
@@ -170,10 +172,7 @@ class OffsetPositionIntervalList():
         idx2 = bisect.bisect_left(lst, position.character)
         idx += idx2
 
-        if (
-            self._position_start_line[idx] <= position.line <= self._position_end_line[idx]
-            and self._position_start_character[idx] <= position.character <= self._position_end_character[idx]
-        ):
+        if self._position_start_character[idx] <= position.character <= self._position_end_character[idx]:
             return idx
 
         return None

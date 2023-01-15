@@ -11,9 +11,10 @@ from lsprotocol.types import (
         Position,
 )
 from pygls.server import LanguageServer
-from pygls.workspace import Document
 
 from ..analyser import Analyser
+from ...types import Interval
+from ...documents.document import BaseDocument
 
 
 logger = logging.getLogger(__name__)
@@ -51,65 +52,45 @@ class LanguageToolAnalyser(Analyser):
 
         return diagnostics
 
-    def _did_open(self, doc: Document):
+    def _did_open(self, doc: BaseDocument):
         self.init_diagnostics(doc)
         diagnostics = self._analyse(doc.cleaned_source, doc)
         self.add_diagnostics(doc, diagnostics)
 
-    def _did_change(self, doc: Document):
-        # TODO remove
-        self.did_open(DidOpenTextDocumentParams(
-            text_document=doc
-        ))
-        # if any(
-        #     type(item) == TextDocumentContentChangeEvent_Type2
-        #     for item in params.content_changes
-        # ):
-        #     self.did_open(DidOpenTextDocumentParams(
-        #         text_document=params.text_document
-        #     ))
-        #
-        # doc = self.get_document(params)
-        # checked = set()
-        # diagnostics = list()
-        # lines = doc.cleaned_lines
-        # # TODO buggy
-        # for change in params.content_changes:
-        #     pos_range = change.range
-        #     # if pos_range.end.line + 1 < len(lines):
-        #     #     end = Position(
-        #     #         line=pos_range.end.line+1,
-        #     #         character=0,
-        #     #     )
-        #     # else:
-        #     #     end = Position(
-        #     #         line=pos_range.end.line,
-        #     #         character=max(0, len(lines[-1])-1),
-        #     #     )
-        #     #
-        #     # pos_range = Range(
-        #     #     start=Position(
-        #     #         line=max(0, pos_range.start.line-1),
-        #     #         character=0,
-        #     #     ),
-        #     #     end=end
-        #     # )
-        #     self.remove_diagnostics_at_rage(doc, pos_range)
-        #     for paragraph in doc.paragraphs_at_range(pos_range, True):
-        #         if paragraph in checked:
-        #             continue
-        #
-        #         diags = self._analyse(
-        #             doc.cleaned_source[paragraph.start:paragraph.start +
-        #                                paragraph.length],
-        #             doc,
-        #             paragraph.start
-        #         )
-        #         diagnostics.extend(diags)
-        #         checked.add(paragraph)
-        # self.add_diagnostics(doc, diagnostics)
+    def _did_change(self, doc: BaseDocument, changes: List[Interval]):
+        diagnostics = list()
+        checked = set()
+        for change in changes:
+            # TODO consider checking 1 paragraph before/after for better context
+            # based analysis. E.g. currently using a given word 3 times as the
+            # first word in a sentence consequtively but with paragraph break
+            # in between will not be detected.
+            paragraph = doc.paragraph_at_offset(
+                change.start,
+                min_length=change.length,
+                cleaned=True,
+            )
+            if paragraph in checked:
+                continue
 
-    def _did_close(self, doc: Document):
+            pos_range = doc.range_at_offset(
+                paragraph.start,
+                paragraph.length,
+                True
+            )
+            self.remove_diagnostics_at_rage(doc, pos_range)
+
+            diags = self._analyse(
+                doc.cleaned_source[paragraph.start:paragraph.start +
+                                   paragraph.length],
+                doc,
+                paragraph.start
+            )
+            diagnostics.extend(diags)
+            checked.add(paragraph)
+        self.add_diagnostics(doc, diagnostics)
+
+    def _did_close(self, doc: BaseDocument):
         workspace = self.language_server.workspace
         doc_langs = {
             document.language

@@ -2,6 +2,7 @@ import logging
 import requests
 import urllib.parse
 
+from typeing import List
 from lsprotocol.types import (
         Diagnostic,
 )
@@ -10,7 +11,7 @@ from pygls.workspace import Document
 
 from ..analyser import Analyser, AnalysisError
 from ...utils import batch_text
-from ...types import ConfigurationError, TEXT_PASSAGE_PATTERN
+from ...types import ConfigurationError, TEXT_PASSAGE_PATTERN, Interval
 
 
 logger = logging.getLogger(__name__)
@@ -60,6 +61,9 @@ class GrammarBotAnalyser(Analyser):
             )
 
         self.add_diagnostics(doc, diagnostics)
+
+    def _did_change(self, doc: Document, changes: List[Interval]):
+        pass
 
     def _analyse(self, text):
         spans = list(batch_text(

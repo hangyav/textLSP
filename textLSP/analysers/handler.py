@@ -7,6 +7,7 @@ from lsprotocol.types import (
         DidChangeTextDocumentParams,
         DidCloseTextDocumentParams,
         DidSaveTextDocumentParams,
+        TextDocumentContentChangeEvent,
 )
 from pygls.workspace import Document
 
@@ -159,3 +160,7 @@ class AnalyserHandler():
             self._did_close,
             params=params
         )
+
+    def update_document(self, doc: Document, change: TextDocumentContentChangeEvent):
+        for name, analyser in self.analysers.items():
+            analyser.update_document(doc, change)

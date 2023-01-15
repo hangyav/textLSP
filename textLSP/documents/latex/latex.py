@@ -65,21 +65,22 @@ class LatexDocument(TreeSitterDocument):
         new_lines_after = list()
 
         for node in self._query.captures(tree.root_node):
-            if node[1] == self.NODE_CONTENT:
-                # Check if we need some newlines after previous elements
-                while len(new_lines_after) > 0:
-                    if node[0].start_point > new_lines_after[0]:
-                        if last_sent is not None:
-                            for nl in self._get_new_lines(2, last_sent.end_point):
-                                last_sent = nl
-                                yield nl
-                        new_lines_after.pop(0)
-                    else:
-                        break
+            # Check if we need some newlines after previous elements
+            while len(new_lines_after) > 0:
+                if node[0].start_point > new_lines_after[0]:
+                    if last_sent is not None:
+                        for nl in self._get_new_lines(2, last_sent.end_point):
+                            last_sent = nl
+                            yield nl
+                    new_lines_after.pop(0)
+                else:
+                    break
 
+            if node[1] == self.NODE_CONTENT:
                 # check if we need newlines due to linebreaks in source
                 if (
                     last_sent is not None
+                    and last_sent.text[-1] != '\n'
                     and node[0].start_point[0] - last_sent.end_point[0] > 1
                     and '' in lines[last_sent.end_point[0]+1:node[0].start_point[0]]
                 ):
@@ -112,7 +113,7 @@ class LatexDocument(TreeSitterDocument):
             elif node[1] == self.NODE_NEWLINE_BEFORE_AFTER:
                 new_lines_after.append(node[0].end_point)
                 if last_sent is not None:
-                    for nl_node in self._get_new_lines(2, node[0].end_point):
+                    for nl_node in self._get_new_lines(2, last_sent.end_point):
                         yield nl_node
                         last_sent = nl_node
 
@@ -123,22 +124,20 @@ class LatexDocument(TreeSitterDocument):
             new_lines_after.pop(0)
 
     def _get_new_lines(self, num, location):
-        return (
-            TextNode.new_line(
+        for i in range(num):
+            yield TextNode.new_line(
                 start_point=(
-                    location[0]+i,
-                    location[1]+1 if i == 0 else 0
+                    location[0],
+                    location[1]+i+1,
                 ),
                 end_point=(
-                    location[0]+i,
-                    location[1]+2 if i == 0 else 1
+                    location[0],
+                    location[1]+i+2,
                 ),
             )
-            for i in range(num)
-        )
 
     def _needs_space_before(self, node, lines, last_sent) -> bool:
-        if last_sent is None:
+        if last_sent is None or last_sent.text[-1] == '\n':
             return False
         if node.start_point[0] == last_sent.end_point[0]:
             return ' ' in lines[node.start_point[0]][last_sent.end_point[1]:node.start_point[1]]
