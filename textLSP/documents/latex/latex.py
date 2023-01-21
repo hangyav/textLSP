@@ -94,7 +94,7 @@ class LatexDocument(TreeSitterDocument):
                     if sp[1] > 0:
                         yield TextNode.space(
                             start_point=(sp[0], sp[1]-1),
-                            end_point=sp
+                            end_point=(sp[0], sp[1]-1),
                         )
                     else:
                         yield TextNode.space(
@@ -104,7 +104,7 @@ class LatexDocument(TreeSitterDocument):
                             ),
                             end_point=(
                                 last_sent.end_point[0],
-                                last_sent.end_point[1]+2
+                                last_sent.end_point[1]+1
                             ),
                         )
 
@@ -118,10 +118,11 @@ class LatexDocument(TreeSitterDocument):
                         last_sent = nl_node
 
         # handling unclosed newlines
-        while len(new_lines_after) > 0:
-            if last_sent is not None:
-                yield from self._get_new_lines(2, last_sent.end_point)
-            new_lines_after.pop(0)
+        # while len(new_lines_after) > 0:
+        #     if last_sent is not None:
+        #         yield from self._get_new_lines(2, last_sent.end_point)
+        #     new_lines_after.pop(0)
+        yield from self._get_new_lines(1, last_sent.end_point)
 
     def _get_new_lines(self, num, location):
         for i in range(num):
@@ -132,7 +133,7 @@ class LatexDocument(TreeSitterDocument):
                 ),
                 end_point=(
                     location[0],
-                    location[1]+i+2,
+                    location[1]+i+1,
                 ),
             )
 

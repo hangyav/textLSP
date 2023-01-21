@@ -66,7 +66,7 @@ class OffsetPositionIntervalList():
         self._position_start_line.append(position_start_line)
         self._position_start_character.append(position_start_character)
         self._position_end_line.append(position_end_line)
-        self._position_end_character.append(position_end_character-1)
+        self._position_end_character.append(position_end_character)
         self._value.append(value)
 
     def add_interval(self, interval: OffsetPositionInterval):
@@ -93,7 +93,7 @@ class OffsetPositionIntervalList():
                 ),
                 end=Position(
                     line=self._position_end_line[idx],
-                    character=self._position_end_character[idx]+1,
+                    character=self._position_end_character[idx],
                 ),
             ),
             value=self._value[idx]
@@ -155,14 +155,22 @@ class OffsetPositionIntervalList():
             return None
         return self.get_interval(idx)
 
-    def get_idx_at_position(self, position: Position) -> int:
+    def get_idx_at_position(self, position: Position, strict=True) -> int:
+        """
+        :param strict: If Flase, return the idx of the next (or last) interval if does not exist
+        """
         idx = bisect.bisect_left(self._position_end_line, position.line)
-        if position.line < self._position_start_line[idx] or position.line > self._position_end_line[idx]:
-            return None
+        length = len(self)
+
+        if idx == length:
+            return None if strict else length-1
+        if position.line < self._position_start_line[idx]:
+            return None if strict else idx
+        if position.line > self._position_end_line[idx]:
+            return None if strict else length-1
 
         lst = list()
         i = idx
-        length = len(self)
         while self._position_end_line[i] == self._position_end_line[idx]:
             lst.append(self._position_end_character[i])
             i += 1
@@ -172,13 +180,21 @@ class OffsetPositionIntervalList():
         idx2 = bisect.bisect_left(lst, position.character)
         idx += idx2
 
+        if idx == length:
+            return None if strict else length-1
+
         if self._position_start_character[idx] <= position.character <= self._position_end_character[idx]:
             return idx
+        if position.character < self._position_start_character[idx]:
+            return None if strict else idx
+        # if position.character > self._position_end_character[idx]
+        return None if strict else min(idx+1, length-1)
 
-        return None
-
-    def get_interval_at_position(self, position: Position) -> OffsetPositionInterval:
-        idx = self.get_idx_at_position(position)
+    def get_interval_at_position(self, position: Position, strict=True) -> OffsetPositionInterval:
+        """
+        :param strict: If Flase, return the object of the next (or last) interval if does not exist
+        """
+        idx = self.get_idx_at_position(position, strict)
         if idx is None:
             return None
         return self.get_interval(idx)
