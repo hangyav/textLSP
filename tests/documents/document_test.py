@@ -112,6 +112,59 @@ def test_get_paragraphs_at_range(content, range, exp):
 
     assert par_lst == exp
 
+
+@pytest.mark.parametrize('content,offset,length,exp', [
+    (
+        '1. This is a sentence. Another sentence in a paragraph.\n'
+        '2. This is a sentence. Another sentence in a paragraph.\n'
+        '3. This is a sentence. Another sentence in a paragraph.\n',
+        0, 0,
+        '1. ',
+    ),
+    (
+        '1. This is a sentence. Another sentence in a paragraph.\n'
+        '2. This is a sentence. Another sentence in a paragraph.\n'
+        '3. This is a sentence. Another sentence in a paragraph.\n',
+        0, 3,
+        '1. ',
+    ),
+    (
+        '1. This is a sentence. Another sentence in a paragraph.\n'
+        '2. This is a sentence. Another sentence in a paragraph.\n'
+        '3. This is a sentence. Another sentence in a paragraph.\n',
+        0, 4,
+        '1. This is a sentence. ',
+    ),
+    (
+        '1. This is a sentence. Another sentence in a paragraph.\n'
+        '2. This is a sentence. Another sentence in a paragraph.\n'
+        '3. This is a sentence. Another sentence in a paragraph.\n',
+        22, 0,
+        'This is a sentence. ',
+    ),
+    (
+        '1. This is a sentence. Another sentence in a paragraph.\n'
+        '2. This is a sentence. Another sentence in a paragraph.\n'
+        '3. This is a sentence. Another sentence in a paragraph.\n',
+        23, 0,
+        'Another sentence in a paragraph.\n',
+    ),
+    (
+        '1. This is a sentence. Another sentence in a paragraph.\n'
+        '2. This is a sentence. Another sentence in a paragraph.\n'
+        '3. This is a sentence. Another sentence in a paragraph.\n',
+        167, 0,
+        'Another sentence in a paragraph.\n',
+    ),
+])
+def test_get_sentence_at_offset(content, offset, length, exp):
+    doc = BaseDocument('DUMMY_URL', content)
+    pos = doc.sentence_at_offset(offset, length)
+    par = doc.source[pos.start:pos.start+pos.length]
+
+    assert par == exp
+
+
 @pytest.mark.parametrize('content,edits,exp', [
     (
         '1. This is a sentence. Another sentence in a paragraph.\n'

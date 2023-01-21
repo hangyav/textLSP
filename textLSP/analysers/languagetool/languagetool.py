@@ -40,9 +40,18 @@ class LanguageToolAnalyser(Analyser):
             if len(match.replacements) > 0:
                 replacements = ', '.join(item for item in match.replacements)
                 replacements = f' -> {replacements}'
+
+            range = doc.range_at_offset(match.offset+offset, match.errorLength, True)
+            range = Range(
+                start=range.start,
+                end=Position(
+                    line=range.end.line,
+                    character=range.end.character+1,
+                )
+            )
             diagnostics.append(
                 Diagnostic(
-                    range=doc.range_at_offset(match.offset+offset, match.errorLength, True),
+                    range=range,
                     message=f'"{token}"{replacements}: {match.message}',
                     source='languagetool',
                     severity=self.get_severity(),
@@ -60,6 +69,7 @@ class LanguageToolAnalyser(Analyser):
     def _did_change(self, doc: BaseDocument, changes: List[Interval]):
         diagnostics = list()
         checked = set()
+        doc_length = len(doc.cleaned_source)
         for change in changes:
             # TODO consider checking 1 paragraph before/after for better context
             # based analysis. E.g. currently using a given word 3 times as the
@@ -73,20 +83,63 @@ class LanguageToolAnalyser(Analyser):
             if paragraph in checked:
                 continue
 
+            # get sentences before paragraph for context check
+            n = 2
+            min_sent_len = 4
+            start_sent = paragraph
+            while n > 0:
+                pos = start_sent.start - 1 - min_sent_len
+                if pos < 0:
+                    break
+
+                start_sent = doc.sentence_at_offset(
+                    pos,
+                    min_length=min_sent_len,
+                    cleaned=True
+                )
+                if len(doc.text_at_offset(start_sent.start, start_sent.length, True).strip()) > 0:
+                    n -= 1
+
+            # get sentences after paragraph for context check
+            n = 2
+            end_sent = paragraph
+            while n > 0:
+                pos = end_sent.start + end_sent.length
+                if pos >= doc_length:
+                    break
+
+                end_sent = doc.sentence_at_offset(
+                    pos,
+                    min_length=min_sent_len,
+                    cleaned=True
+                )
+                if len(doc.text_at_offset(end_sent.start, end_sent.length, True).strip()) > 0:
+                    n -= 1
+            ###################################################################
+
             pos_range = doc.range_at_offset(
                 paragraph.start,
-                paragraph.length,
+                end_sent.start-paragraph.start-1 + end_sent.length,
                 True
             )
             self.remove_diagnostics_at_rage(doc, pos_range)
 
             diags = self._analyse(
-                doc.cleaned_source[paragraph.start:paragraph.start +
-                                   paragraph.length],
+                doc.text_at_offset(
+                    start_sent.start,
+                    end_sent.start-start_sent.start-1 + end_sent.length,
+                    True
+                ),
                 doc,
-                paragraph.start
+                start_sent.start,
             )
-            diagnostics.extend(diags)
+
+            diagnostics.extend([
+                diag
+                for diag in diags
+                if diag.range.start >= pos_range.start
+            ])
+
             checked.add(paragraph)
         self.add_diagnostics(doc, diagnostics)
 

@@ -82,6 +82,39 @@ class BaseDocument(Document):
         row, col = pos.line, pos.character
         return col + sum(len(line) for line in lines[:row])
 
+    def text_at_offset(self, offset: int, length: int, cleaned=False) -> Interval:
+        source = self.cleaned_source if cleaned else self.source
+        return source[offset:offset+length]
+
+    def sentence_at_offset(self, offset: int, min_length=0, cleaned=False) -> Interval:
+        start_idx = offset
+        end_idx = offset
+        source = self.cleaned_source if cleaned else self.source
+        len_source = len(source)
+
+        assert start_idx >= 0
+        assert end_idx < len_source
+
+        while True:
+            if start_idx - 2 < 0:
+                start_idx = 0
+                break
+            if source[start_idx-2] in {'.', '!', '?'} and source[start_idx-1] in {' ', '\n'}:
+                break
+            start_idx -= 1
+
+        while end_idx < len_source-1:
+            if (
+                    end_idx >= 1
+                    and source[end_idx-1] in {'.', '!', '?'}
+                    and source[end_idx in {' ', '\n'}]
+                    and end_idx-start_idx+1 >= min_length
+            ):
+                break
+            end_idx += 1
+
+        return Interval(start_idx, end_idx-start_idx+1)
+
     def paragraph_at_offset(self, offset: int, min_length=0, cleaned=False) -> Interval:
         """
         returns (start_offset, length)
