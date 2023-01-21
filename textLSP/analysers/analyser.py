@@ -103,7 +103,7 @@ class Analyser():
                 )
 
     def _remove_overflown_diagnostics(self, doc: BaseDocument):
-        last_position = doc.last_position()
+        last_position = doc.last_position(True)
         self._diagnostics_dict[doc.uri] = [
             diag
             for diag in self._diagnostics_dict[doc.uri]

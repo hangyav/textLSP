@@ -387,6 +387,9 @@ class TreeSitterDocument(CleanableDocument):
         if not cleaned:
             return super().last_position(cleaned)
 
+        if self._cleaned_source is None:
+            self._clean_source()
+
         last = self._text_intervals.get_interval(len(self._text_intervals)-1)
         return last.position_range.end
 
