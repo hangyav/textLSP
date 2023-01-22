@@ -1,5 +1,6 @@
 import logging
 
+from typing import List, Optional
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol, lsp_method
 from pygls.workspace import Document
@@ -8,17 +9,22 @@ from lsprotocol.types import (
     TEXT_DOCUMENT_DID_CHANGE,
     TEXT_DOCUMENT_DID_CLOSE,
     TEXT_DOCUMENT_DID_SAVE,
+    TEXT_DOCUMENT_CODE_ACTION,
     WORKSPACE_DID_CHANGE_CONFIGURATION,
     INITIALIZE,
 )
 from lsprotocol.types import (
-        DidOpenTextDocumentParams,
-        DidChangeTextDocumentParams,
-        DidSaveTextDocumentParams,
-        DidChangeConfigurationParams,
-        DidCloseTextDocumentParams,
-        InitializeParams,
-        InitializeResult,
+    DidOpenTextDocumentParams,
+    DidChangeTextDocumentParams,
+    DidSaveTextDocumentParams,
+    DidChangeConfigurationParams,
+    DidCloseTextDocumentParams,
+    InitializeParams,
+    InitializeResult,
+    CodeActionParams,
+    CodeActionKind,
+    CodeActionOptions,
+    CodeAction,
 )
 from .workspace import TextLSPWorkspace
 from .utils import merge_dicts, get_textlsp_version
@@ -117,3 +123,18 @@ async def did_close(ls, params: DidCloseTextDocumentParams):
 @SERVER.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)
 def did_change_configuration(ls, params: DidChangeConfigurationParams):
     ls.update_settings(params.settings)
+
+
+@SERVER.feature(
+    TEXT_DOCUMENT_CODE_ACTION,
+    CodeActionOptions(
+        code_action_kinds=[
+            CodeActionKind.QuickFix,
+        ],
+    ),
+)
+def code_action(
+    ls: TextLSPLanguageServer,
+    params: CodeActionParams
+) -> Optional[List[CodeAction]]:
+    return ls.analyser_handler.get_code_actions(params)

@@ -1,6 +1,7 @@
 import logging
 import asyncio
 
+from typing import List, Optional
 from lsprotocol.types import MessageType
 from lsprotocol.types import (
         DidOpenTextDocumentParams,
@@ -8,6 +9,8 @@ from lsprotocol.types import (
         DidCloseTextDocumentParams,
         DidSaveTextDocumentParams,
         TextDocumentContentChangeEvent,
+        CodeActionParams,
+        CodeAction,
 )
 from pygls.workspace import Document
 
@@ -64,6 +67,15 @@ class AnalyserHandler():
 
     def get_diagnostics(self, doc: Document):
         return [analyser.get_diagnostics(doc) for analyser in self.analysers.values()]
+
+    def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
+        res = list()
+        for analyser in self.analysers.values():
+            tmp_lst = analyser.get_code_actions(params)
+            if tmp_lst is not None and len(tmp_lst) > 0:
+                res.extend(tmp_lst)
+
+        return res if len(res) > 0 else None
 
     async def _submit_task(self, function, *args, **kwargs):
         functions = list()

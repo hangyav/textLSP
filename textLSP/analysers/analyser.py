@@ -1,6 +1,6 @@
 import bisect
 
-from typing import List
+from typing import List, Optional
 from pygls.server import LanguageServer
 from pygls.workspace import Document
 from lsprotocol.types import (
@@ -14,6 +14,14 @@ from lsprotocol.types import (
         DiagnosticSeverity,
         Range,
         Position,
+        CodeActionParams,
+        CodeAction,
+        CodeActionKind,
+        WorkspaceEdit,
+        TextDocumentEdit,
+        TextEdit,
+        VersionedTextDocumentIdentifier,
+        MessageType,
 )
 
 from ..documents.document import BaseDocument, ChangeTracker
@@ -40,6 +48,7 @@ class Analyser():
         self.config = dict()
         self.update_settings(config)
         self._diagnostics_dict = dict()
+        self._code_actions_dict = dict()
         self._content_change_dict = dict()
 
     def _did_open(self, doc: Document):
@@ -81,9 +90,9 @@ class Analyser():
             val += shift[1]
             accumulative_shifts.append((shift[0]+1, val))
             bisect_lst.append(shift[0]+1)
-
-        idx = 0
         num_shifts = len(accumulative_shifts)
+
+        # diagnostics
         for diag in self._diagnostics_dict[doc.uri]:
             idx = bisect.bisect_left(bisect_lst, diag.range.start.line)
             idx = min(idx, num_shifts-1)
@@ -102,19 +111,45 @@ class Analyser():
                     )
                 )
 
-    def _remove_overflown_diagnostics(self, doc: BaseDocument):
+        # code actions
+        for action in self._code_actions_dict[doc.uri]:
+            range = action.edit.document_changes[0].edits[0].range
+            idx = bisect.bisect_left(bisect_lst, range.start.line)
+            idx = min(idx, num_shifts-1)
+            shift = accumulative_shifts[idx][1]
+
+            if shift != 0:
+                action.edit.document_changes[0].edits[0].range = Range(
+                    start=Position(
+                        line=range.start.line + shift,
+                        character=range.start.character
+                    ),
+                    end=Position(
+                        line=range.end.line + shift,
+                        character=range.end.character
+                    )
+                )
+
+    def _remove_overflown_code_items(self, doc: BaseDocument):
         last_position = doc.last_position(True)
+
         self._diagnostics_dict[doc.uri] = [
             diag
             for diag in self._diagnostics_dict[doc.uri]
             if diag.range.start <= last_position
         ]
 
+        self._code_actions_dict[doc.uri] = [
+            action
+            for action in self._code_actions_dict[doc.uri]
+            if action.edit.document_changes[0].edits[0].range.start <= last_position
+        ]
+
     def did_change(self, params: DidChangeTextDocumentParams):
         line_shifts = self._get_line_shifts(params)
         doc = self.get_document(params)
         self._handle_line_shifts(doc, line_shifts)
-        self._remove_overflown_diagnostics(doc)
+        self._remove_overflown_code_items(doc)
 
         if self.should_run_on(Analyser.CONFIGURATION_CHECK_ON_CHANGE):
             if self._content_change_dict[doc.uri].full_document_change:
@@ -192,12 +227,75 @@ class Analyser():
         self._diagnostics_dict[doc.uri] += diagnostics
         self.language_server.publish_stored_diagnostics(doc)
 
-    def remove_diagnostics_at_rage(self, doc: Document, pos_range: Range):
+    def remove_code_items_at_rage(self, doc: Document, pos_range: Range):
         diagnostics = list()
         for diag in self.get_diagnostics(doc):
             if diag.range.end < pos_range.start or diag.range.start > pos_range.end:
                 diagnostics.append(diag)
         self._diagnostics_dict[doc.uri] = diagnostics
+
+        code_actions = list()
+        for action in self._code_actions_dict[doc.uri]:
+            range = action.edit.document_changes[0].edits[0].range
+            if range.end < pos_range.start or range.start > pos_range.end:
+                code_actions.append(action)
+        self._code_actions_dict[doc.uri] = code_actions
+
+    def init_code_actions(self, doc: Document):
+        self._code_actions_dict[doc.uri] = list()
+
+    def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
+        doc = self.get_document(params)
+        range = params.range
+        if range.start != range.end:
+            self.language_server.show_message(
+                'Code action is not supported for range.',
+                MessageType.Error,
+            )
+            return None
+
+        # TODO make this faster?
+        res = [
+            action
+            for action in self._code_actions_dict[doc.uri]
+            if (
+                action.edit.document_changes[0].edits[0].range.start <= range.start
+                and action.edit.document_changes[0].edits[0].range.end >= range.end
+            )
+        ]
+        return res
+
+    def add_code_actions(self, doc: Document, actions: List[CodeAction]):
+        self._code_actions_dict[doc.uri] += actions
+
+    @staticmethod
+    def build_single_suggestion_action(
+            doc: Document,
+            title: str,
+            edit: TextEdit,
+            kind=CodeActionKind.QuickFix,
+            diagnostic: Diagnostic = None,
+    ) -> CodeAction:
+        return CodeAction(
+            title=title,
+            kind=kind,
+            diagnostics=[diagnostic] if diagnostic else None,
+            edit=WorkspaceEdit(
+                document_changes=[
+                    TextDocumentEdit(
+                        text_document=VersionedTextDocumentIdentifier(
+                            uri=doc.uri,
+                            version=doc.version,
+                        ),
+                        edits=[edit]
+                    )
+                ]
+            )
+        )
+
+    def init_document_items(self, doc: Document):
+        self.init_diagnostics(doc)
+        self.init_code_actions(doc)
 
 
 class AnalysisError(Exception):
