@@ -92,14 +92,18 @@ class Analyser():
             bisect_lst.append(shift[0]+1)
         num_shifts = len(accumulative_shifts)
 
+        # TODO extract to function
         # diagnostics
+        diagnostics = list()
         for diag in self._diagnostics_dict[doc.uri]:
-            idx = bisect.bisect_left(bisect_lst, diag.range.start.line)
+            range = diag.range
+            idx = bisect.bisect_left(bisect_lst, range.start.line)
             idx = min(idx, num_shifts-1)
             shift = accumulative_shifts[idx][1]
 
             if shift != 0:
-                range = diag.range
+                if range.start.line + shift < 0:
+                    continue
                 diag.range = Range(
                     start=Position(
                         line=range.start.line + shift,
@@ -110,8 +114,11 @@ class Analyser():
                         character=range.end.character
                     )
                 )
+            diagnostics.append(diag)
+        self._diagnostics_dict[doc.uri] = diagnostics
 
         # code actions
+        code_actions = list()
         for action in self._code_actions_dict[doc.uri]:
             range = action.edit.document_changes[0].edits[0].range
             idx = bisect.bisect_left(bisect_lst, range.start.line)
@@ -119,6 +126,8 @@ class Analyser():
             shift = accumulative_shifts[idx][1]
 
             if shift != 0:
+                if range.start.line + shift < 0:
+                    continue
                 action.edit.document_changes[0].edits[0].range = Range(
                     start=Position(
                         line=range.start.line + shift,
@@ -129,6 +138,8 @@ class Analyser():
                         character=range.end.character
                     )
                 )
+            code_actions.append(action)
+        self._code_actions_dict[doc.uri] = code_actions
 
     def _remove_overflown_code_items(self, doc: BaseDocument):
         last_position = doc.last_position(True)
