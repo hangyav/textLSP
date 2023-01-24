@@ -32,6 +32,8 @@ setup(
         'tree_sitter>=0.20.1',
         'gitpython>=3.1.29',
         'appdirs>=1.4.4',
+        'gramformer @ git+https://github.com/PrithivirajDamodaran/Gramformer.git',
+        'torch>=1.13.1',
     ],
     extras_require={
         'dev': [

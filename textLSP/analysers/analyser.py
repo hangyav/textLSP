@@ -157,6 +157,7 @@ class Analyser():
         ]
 
     def did_change(self, params: DidChangeTextDocumentParams):
+        # TODO handle shifts within lines
         line_shifts = self._get_line_shifts(params)
         doc = self.get_document(params)
         self._handle_line_shifts(doc, line_shifts)

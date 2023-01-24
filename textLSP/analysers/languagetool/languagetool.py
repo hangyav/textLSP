@@ -1,6 +1,6 @@
 import logging
 
-from typing import List
+from typing import List, Tuple
 from collections import defaultdict
 from language_tool_python import LanguageTool
 from lsprotocol.types import (
@@ -8,6 +8,7 @@ from lsprotocol.types import (
         Range,
         Position,
         TextEdit,
+        CodeAction,
 )
 from pygls.server import LanguageServer
 
@@ -29,7 +30,7 @@ class LanguageToolAnalyser(Analyser):
         super().__init__(language_server, config)
         self.tools = dict()
 
-    def _analyse(self, text, doc, offset=0) -> List[Diagnostic]:
+    def _analyse(self, text, doc, offset=0) -> Tuple[List[Diagnostic], List[CodeAction]]:
         diagnostics = list()
         code_actions = list()
         matches = self._get_tool_for_language(doc.language).check(text)
