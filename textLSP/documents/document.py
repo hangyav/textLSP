@@ -1,7 +1,7 @@
 import logging
 import tempfile
 
-from typing import Optional, Generator, List
+from typing import Optional, Generator, List, Dict
 from dataclasses import dataclass
 
 from lsprotocol.types import (
@@ -24,6 +24,10 @@ logger = logging.getLogger(__name__)
 
 
 class BaseDocument(Document):
+    def __init__(self, *args, config: Dict = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.config = config
+
     @property
     def cleaned_source(self) -> str:
         return self.source
@@ -454,20 +458,23 @@ class DocumentTypeFactory():
     @staticmethod
     def get_document(
         doc_uri: str,
+        config: Dict,
         source: Optional[str] = None,
         version: Optional[int] = None,
         language_id: Optional[str] = None,
         sync_kind=None,
     ) -> Document:
         try:
+            type = DocumentTypeFactory.get_file_type(language_id)
             cls = get_class(
                 '{}.{}'.format(
                     documents.__name__,
-                    DocumentTypeFactory.get_file_type(language_id)
+                    type,
                 ),
                 BaseDocument,
             )
             return cls(
+                config=config.get(type, dict()),
                 uri=doc_uri,
                 source=source,
                 version=version,
@@ -476,6 +483,7 @@ class DocumentTypeFactory():
             )
         except ImportError:
             return BaseDocument(
+                config=dict(),
                 uri=doc_uri,
                 source=source,
                 version=version,

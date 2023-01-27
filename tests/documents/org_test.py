@@ -11,7 +11,7 @@ from textLSP.documents.org import OrgDocument
         '    - Level 2 list 1\n'
         '    - Level 2 list 2',
         #
-        'DONE Task 1\n'
+        'Task 1\n'
         'Level 1 list:\n'
         'Level 2 list 1\n'
         'Level 2 list 2\n'
@@ -52,6 +52,7 @@ def test_clean(src, clean):
     doc = OrgDocument(
         'tmp.org',
         src,
+        config={OrgDocument.CONFIGURATION_TODO_KEYWORDS: {'DONE'}}
     )
 
     assert doc.cleaned_source == clean

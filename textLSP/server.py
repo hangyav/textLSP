@@ -44,6 +44,7 @@ class TextLSPLanguageServerProtocol(LanguageServerProtocol):
         self.workspace = TextLSPWorkspace.workspace2textlspworkspace(
             self.workspace,
             self._server.analyser_handler,
+            self._server.settings,
         )
         self._server.update_settings(params.initialization_options)
         return result
@@ -54,6 +55,7 @@ class TextLSPLanguageServer(LanguageServer):
     # settings keys such as textLSP.check_text.on_edit
     CONFIGURATION_SECTION = 'textLSP'
     CONFIGURATION_ANALYSERS = 'analysers'
+    CONFIGURATION_DOCUMENTS = 'documents'
 
     COMMAND_ANALYSE = 'analyse'
 
@@ -66,6 +68,7 @@ class TextLSPLanguageServer(LanguageServer):
     def init_settings(self):
         self.settings.setdefault(self.CONFIGURATION_SECTION, dict())
         self.settings[self.CONFIGURATION_SECTION].setdefault(self.CONFIGURATION_ANALYSERS, None)
+        self.settings[self.CONFIGURATION_SECTION].setdefault(self.CONFIGURATION_DOCUMENTS, None)
 
     def get_analyser_settings(self, settings=None):
         if settings is None:
@@ -78,6 +81,17 @@ class TextLSPLanguageServer(LanguageServer):
             return self.settings[self.CONFIGURATION_SECTION][self.CONFIGURATION_ANALYSERS]
         return None
 
+    def get_document_settings(self, settings=None):
+        if settings is None:
+            settings = self.settings
+
+        if (
+            self.CONFIGURATION_SECTION in settings and
+            self.CONFIGURATION_DOCUMENTS in settings[self.CONFIGURATION_SECTION]
+        ):
+            return self.settings[self.CONFIGURATION_SECTION][self.CONFIGURATION_DOCUMENTS]
+        return None
+
     def update_settings(self, settings):
         if settings is None or len(settings) == 0:
             return
@@ -85,7 +99,12 @@ class TextLSPLanguageServer(LanguageServer):
         if self.get_analyser_settings(settings):
             # update only if there was any update related to it
             self.analyser_handler.update_settings(
-                    self.get_analyser_settings()
+                self.get_analyser_settings()
+            )
+        if self.get_document_settings(settings):
+            # update only if there was any update related to it
+            self.lsp.workspace.update_settings(
+                self.get_document_settings()
             )
 
     def publish_stored_diagnostics(self, doc: Document):

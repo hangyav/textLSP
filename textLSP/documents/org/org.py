@@ -5,6 +5,8 @@ from ..document import TreeSitterDocument, TextNode
 
 
 class OrgDocument(TreeSitterDocument):
+    CONFIGURATION_TODO_KEYWORDS = 'org_todo_keywords'
+
     EXPR = 'expr'
     HEADLINE = 'headline'
     PARAGRAPH = 'paragraph'
@@ -38,6 +40,9 @@ class OrgDocument(TreeSitterDocument):
             **kwargs,
         )
         self._query = self._build_query()
+        keywords = self.config.setdefault(self.CONFIGURATION_TODO_KEYWORDS, set())
+        if type(keywords) != set:
+            self.config[self.CONFIGURATION_TODO_KEYWORDS] = set(keywords)
 
     def _build_query(self):
         query_str = ''
@@ -102,8 +107,9 @@ class OrgDocument(TreeSitterDocument):
                             ),
                         )
 
-                last_sent = TextNode.from_ts_node(node[0])
-                yield last_sent
+                if node[0].text.decode('utf-8') not in self.config[self.CONFIGURATION_TODO_KEYWORDS]:
+                    last_sent = TextNode.from_ts_node(node[0])
+                    yield last_sent
             elif node[1] == self.NODE_NEWLINE_AFTER_ONE:
                 self._insert_point_in_order(node[0].end_point, new_lines_after)
 
