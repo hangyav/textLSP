@@ -16,17 +16,17 @@ from lsprotocol.types import (
         Position,
         CodeActionParams,
         CodeAction,
-        CodeActionKind,
         WorkspaceEdit,
         TextDocumentEdit,
         TextEdit,
+        Command,
         VersionedTextDocumentIdentifier,
         MessageType,
 )
 
 from ..documents.document import BaseDocument, ChangeTracker
 from ..utils import merge_dicts
-from ..types import Interval
+from ..types import Interval, TextLSPCodeActionKind
 
 
 class Analyser():
@@ -42,7 +42,8 @@ class Analyser():
         CONFIGURATION_CHECK_ON_SAVE: True,
     }
 
-    def __init__(self, language_server: LanguageServer, config: dict):
+    def __init__(self, language_server: LanguageServer, config: dict, name: str):
+        self.name = name
         self.default_severity = DiagnosticSeverity.Information
         self.language_server = language_server
         self.config = dict()
@@ -50,15 +51,18 @@ class Analyser():
         self._diagnostics_dict = dict()
         self._code_actions_dict = dict()
         self._content_change_dict = dict()
+        self._checked_documents = set()
 
     def _did_open(self, doc: Document):
         raise NotImplementedError()
 
     def did_open(self, params: DidOpenTextDocumentParams):
         doc = self.get_document(params)
+        self.init_document_items(doc)
         self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
         if self.should_run_on(Analyser.CONFIGURATION_CHECK_ON_OPEN):
             self._did_open(doc)
+            self._checked_documents.add(doc.uri)
 
     def _did_change(self, doc: Document, changes: List[Interval]):
         raise NotImplementedError()
@@ -275,6 +279,46 @@ class Analyser():
                 and action.edit.document_changes[0].edits[0].range.end >= range.end
             )
         ]
+
+        if not (
+            self.should_run_on(self.CONFIGURATION_CHECK_ON_CHANGE)
+            or self.should_run_on(self.CONFIGURATION_CHECK_ON_SAVE)
+        ):
+            title = f'Run {self.name} on paragraph'
+            paragraph = doc.paragraph_at_position(range.start, True)
+            res.append(
+                self.build_command_action(
+                    doc=doc,
+                    title=title,
+                    command=Command(
+                        title=title,
+                        command=self.language_server.COMMAND_ANALYSE,
+                        arguments=[{
+                            'uri': doc.uri,
+                            'analyser': self.name,
+                            'interval': paragraph,
+                        }],
+                    ),
+                )
+            )
+
+        if range.start == Position(0, 0) and doc.uri not in self._checked_documents:
+            title = f'Run {self.name} on the full document'
+            res.append(
+                self.build_command_action(
+                    doc=doc,
+                    title=title,
+                    command=Command(
+                        title=title,
+                        command=self.language_server.COMMAND_ANALYSE,
+                        arguments=[{
+                            'uri': doc.uri,
+                            'analyser': self.name,
+                        }],
+                    ),
+                )
+            )
+
         return res
 
     def add_code_actions(self, doc: Document, actions: List[CodeAction]):
@@ -285,7 +329,7 @@ class Analyser():
             doc: Document,
             title: str,
             edit: TextEdit,
-            kind=CodeActionKind.QuickFix,
+            kind=TextLSPCodeActionKind.AcceptSuggestion,
             diagnostic: Diagnostic = None,
     ) -> CodeAction:
         return CodeAction(
@@ -305,9 +349,41 @@ class Analyser():
             )
         )
 
+    @staticmethod
+    def build_command_action(
+            doc: Document,
+            title: str,
+            command: Command,
+            kind=TextLSPCodeActionKind.Command,
+            diagnostic: Diagnostic = None,
+    ) -> CodeAction:
+        return CodeAction(
+            title=title,
+            kind=kind,
+            diagnostics=[diagnostic] if diagnostic else None,
+            command=command,
+        )
+
     def init_document_items(self, doc: Document):
         self.init_diagnostics(doc)
         self.init_code_actions(doc)
+
+    def _command_analyse(self, doc: BaseDocument, interval: Interval = None):
+        if interval is not None:
+            self._did_change(doc, [interval])
+        else:
+            self._did_open(doc)
+
+    def command_analyse(self, *args):
+        args = args[0]
+        doc = self.get_document(args['uri'])
+        if 'interval' in args:
+            interval = args['interval']
+            interval = Interval(interval['start'], interval['length'])
+            self._command_analyse(doc, interval)
+        else:
+            self._command_analyse(doc)
+            self._checked_documents.add(args['uri'])
 
 
 class AnalysisError(Exception):

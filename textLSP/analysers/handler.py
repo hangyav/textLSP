@@ -17,7 +17,7 @@ from pygls.workspace import Document
 from .. import analysers
 from .analyser import Analyser, AnalysisError
 from ..utils import get_class
-from ..types import ConfigurationError
+from ..types import ConfigurationError, Interval
 
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,11 @@ class AnalyserHandler():
                         '{}.{}'.format(analysers.__name__, name),
                         Analyser,
                     )
-                    self.analysers[name] = cls(self.language_server, config)
+                    self.analysers[name] = cls(
+                        self.language_server,
+                        config,
+                        name
+                    )
                 except ImportError as e:
                     self.language_server.show_message(
                         str(e),
@@ -172,6 +176,22 @@ class AnalyserHandler():
             self._did_close,
             params=params
         )
+
+    async def _command_analyse(
+        self,
+        analyser_name: str,
+        analyser: Analyser,
+        args,
+    ):
+        analyser.command_analyse(*args)
+
+    async def command_analyse(self, *args):
+        args = args[0]
+        if 'analyser' in args[0]:
+            analyser = args[0].pop('analyser')
+            self.analysers[analyser].command_analyse(*args)
+        else:
+            await self._submit_task(self._command_analyse, args)
 
     def update_document(self, doc: Document, change: TextDocumentContentChangeEvent):
         for name, analyser in self.analysers.items():

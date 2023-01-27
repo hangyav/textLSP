@@ -1,10 +1,11 @@
 import re
 import bisect
+import enum
 
 from typing import Optional, Any
 from dataclasses import dataclass
 
-from lsprotocol.types import Position, Range
+from lsprotocol.types import Position, Range, CodeActionKind
 
 
 TEXT_PASSAGE_PATTERN = re.compile('[.?!] |\\n')
@@ -198,3 +199,9 @@ class OffsetPositionIntervalList():
         if idx is None:
             return None
         return self.get_interval(idx)
+
+
+@enum.unique
+class TextLSPCodeActionKind(str, enum.Enum):
+    AcceptSuggestion = CodeActionKind.QuickFix + '.accept_suggestion'
+    Command = 'command'

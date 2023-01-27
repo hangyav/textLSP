@@ -26,8 +26,8 @@ class GramformerAnalyser(Analyser):
 
     SETTINGS_DEFAULT_GPU = False
 
-    def __init__(self, language_server: LanguageServer, config: dict):
-        super().__init__(language_server, config)
+    def __init__(self, language_server: LanguageServer, config: dict, name: str):
+        super().__init__(language_server, config, name)
         try:
             # This could take some time the first time to download models.
             self.analyser = Gramformer(
@@ -120,7 +120,6 @@ class GramformerAnalyser(Analyser):
         return diagnostics, code_actions
 
     def _did_open(self, doc: BaseDocument):
-        self.init_document_items(doc)
         diagnostics, actions = self._analyse_sentences(doc.cleaned_source, doc)
         self.add_diagnostics(doc, diagnostics)
         self.add_code_actions(doc, actions)

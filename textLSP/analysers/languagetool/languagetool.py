@@ -26,8 +26,8 @@ LANGUAGE_MAP['en-US'] = 'en-US'
 
 
 class LanguageToolAnalyser(Analyser):
-    def __init__(self, language_server: LanguageServer, config: dict):
-        super().__init__(language_server, config)
+    def __init__(self, language_server: LanguageServer, config: dict, name: str):
+        super().__init__(language_server, config, name)
         self.tools = dict()
 
     def _analyse(self, text, doc, offset=0) -> Tuple[List[Diagnostic], List[CodeAction]]:
@@ -70,7 +70,6 @@ class LanguageToolAnalyser(Analyser):
         return diagnostics, code_actions
 
     def _did_open(self, doc: BaseDocument):
-        self.init_document_items(doc)
         diagnostics, actions = self._analyse(doc.cleaned_source, doc)
         self.add_diagnostics(doc, diagnostics)
         self.add_code_actions(doc, actions)

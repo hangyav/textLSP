@@ -22,13 +22,19 @@ class GrammarBotAnalyser(Analyser):
     CONFIGURATION_INPUT_MAX_REQUESTS = 'input_max_requests'
     CONFIGURATION_REQUESTS_OVERFLOW = 'requests_overflow'
 
+    SETTINGS_DEFAULT_CHECK_ON = {
+        Analyser.CONFIGURATION_CHECK_ON_OPEN: False,
+        Analyser.CONFIGURATION_CHECK_ON_CHANGE: False,
+        Analyser.CONFIGURATION_CHECK_ON_SAVE: False,
+    }
+
     URL = "https://grammarbot.p.rapidapi.com/check"
     CHARACTER_LIMIT_MAX = 8000
     CHARACTER_LIMIT_MIN = 7500
     INPUT_MAX_REQUESTS = 10
 
-    def __init__(self, language_server: LanguageServer, config: dict):
-        super().__init__(language_server, config)
+    def __init__(self, language_server: LanguageServer, config: dict, name: str):
+        super().__init__(language_server, config, name)
         # TODO save this somewhere
         self._remaining_requests = None
         if GrammarBotAnalyser.CONFIGURATION_API_KEY not in self.config:
@@ -40,7 +46,6 @@ class GrammarBotAnalyser(Analyser):
         }
 
     def _did_open(self, doc: Document):
-        self.init_diagnostics(doc)
         diagnostics = list()
         source = doc.cleaned_source
 

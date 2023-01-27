@@ -55,6 +55,8 @@ class TextLSPLanguageServer(LanguageServer):
     CONFIGURATION_SECTION = 'textLSP'
     CONFIGURATION_ANALYSERS = 'analysers'
 
+    COMMAND_ANALYSE = 'analyse'
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.settings = dict()
@@ -101,27 +103,27 @@ SERVER = TextLSPLanguageServer(
 
 
 @SERVER.feature(TEXT_DOCUMENT_DID_OPEN)
-async def did_open(ls, params: DidOpenTextDocumentParams):
+async def did_open(ls: TextLSPLanguageServer, params: DidOpenTextDocumentParams):
     await ls.analyser_handler.did_open(params)
 
 
 @SERVER.feature(TEXT_DOCUMENT_DID_CHANGE)
-async def did_change(ls, params: DidChangeTextDocumentParams):
+async def did_change(ls: TextLSPLanguageServer, params: DidChangeTextDocumentParams):
     await ls.analyser_handler.did_change(params)
 
 
 @SERVER.feature(TEXT_DOCUMENT_DID_SAVE)
-async def did_save(ls, params: DidSaveTextDocumentParams):
+async def did_save(ls: TextLSPLanguageServer, params: DidSaveTextDocumentParams):
     await ls.analyser_handler.did_save(params)
 
 
 @SERVER.feature(TEXT_DOCUMENT_DID_CLOSE)
-async def did_close(ls, params: DidCloseTextDocumentParams):
+async def did_close(ls: TextLSPLanguageServer, params: DidCloseTextDocumentParams):
     await ls.analyser_handler.did_close(params)
 
 
 @SERVER.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)
-def did_change_configuration(ls, params: DidChangeConfigurationParams):
+def did_change_configuration(ls: TextLSPLanguageServer, params: DidChangeConfigurationParams):
     ls.update_settings(params.settings)
 
 
@@ -138,3 +140,8 @@ def code_action(
     params: CodeActionParams
 ) -> Optional[List[CodeAction]]:
     return ls.analyser_handler.get_code_actions(params)
+
+
+@SERVER.command(TextLSPLanguageServer.COMMAND_ANALYSE)
+async def command_analyse(ls: TextLSPLanguageServer, *args):
+    await ls.analyser_handler.command_analyse(*args)
