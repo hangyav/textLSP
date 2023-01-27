@@ -261,6 +261,20 @@ class TextNode():
             end_point=end_point,
         )
 
+    @staticmethod
+    def get_new_lines(num, location):
+        for i in range(num):
+            yield TextNode.new_line(
+                start_point=(
+                    location[0],
+                    location[1]+i+1,
+                ),
+                end_point=(
+                    location[0],
+                    location[1]+i+1,
+                ),
+            )
+
     def __len__(self):
         return len(self.text)
 

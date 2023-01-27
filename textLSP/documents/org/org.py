@@ -4,42 +4,36 @@ from tree_sitter import Tree
 from ..document import TreeSitterDocument, TextNode
 
 
-class LatexDocument(TreeSitterDocument):
-    TEXT = 'text'
-    WORD = 'word'
-    SECTION = 'section'
-    SUBSECTION = 'subsection'
+class OrgDocument(TreeSitterDocument):
+    EXPR = 'expr'
+    HEADLINE = 'headline'
     PARAGRAPH = 'paragraph'
-    CURLY_GROUP = 'curly_group'
-    ENUM_ITEM = 'enum_item'
-    GENERIC_ENVIRONMENT = 'generic_environment'
+    SECTION = 'section'
+    PARAGRAPH = 'paragraph'
+    ITEM = 'item'
 
     NODE_CONTENT = 'content'
-    NODE_NEWLINE_BEFORE_AFTER = 'newline_before_after'
+    NODE_NEWLINE_AFTER_ONE = 'newline_after_one'
+    NODE_NEWLINE_AFTER_TWO = 'newline_after_two'
 
     TEXT_ROOTS = {
-        SECTION,
-        SUBSECTION,
-        PARAGRAPH,
-        CURLY_GROUP,
-        ENUM_ITEM,
-        GENERIC_ENVIRONMENT,
-    }
-
-    NEWLINE_BEFORE_AFTER_CURLY_PARENT = {
-        SECTION,
-        SUBSECTION,
         PARAGRAPH,
     }
 
-    NEWLINE_BEFORE_AFTER = {
-        ENUM_ITEM,
+    TEXT_ROOTS_WITH_ITEM = {
+        HEADLINE,
+    }
+
+    NEWLINE_AFTER_ONE = {
+        PARAGRAPH,
+        HEADLINE,
+        SECTION,
     }
 
     def __init__(self, *args, **kwargs):
         super().__init__(
-            'latex',
-            'https://github.com/latex-lsp/tree-sitter-latex',
+            'org',
+            'https://github.com/milisims/tree-sitter-org',
             *args,
             **kwargs,
         )
@@ -49,12 +43,13 @@ class LatexDocument(TreeSitterDocument):
         query_str = ''
 
         for root in self.TEXT_ROOTS:
-            query_str += f'({root} ({self.TEXT} ({self.WORD}) @{self.NODE_CONTENT}))\n'
+            query_str += f'({root} ({self.EXPR}) @{self.NODE_CONTENT})\n'
 
-        for root in self.NEWLINE_BEFORE_AFTER_CURLY_PARENT:
-            query_str += f'({root} ({self.CURLY_GROUP}) @{self.NODE_NEWLINE_BEFORE_AFTER})\n'
-        for root in self.NEWLINE_BEFORE_AFTER:
-            query_str += f'({root}) @{self.NODE_NEWLINE_BEFORE_AFTER}\n'
+        for root in self.TEXT_ROOTS_WITH_ITEM:
+            query_str += f'({root} (item ({self.EXPR}) @{self.NODE_CONTENT}))\n'
+
+        for root in self.NEWLINE_AFTER_ONE:
+            query_str += f'({root}) @{self.NODE_NEWLINE_AFTER_ONE}\n'
 
         return self._language.query(query_str)
 
@@ -69,7 +64,7 @@ class LatexDocument(TreeSitterDocument):
             while len(new_lines_after) > 0:
                 if node[0].start_point > new_lines_after[0]:
                     if last_sent is not None:
-                        for nl in TextNode.get_new_lines(2, last_sent.end_point):
+                        for nl in TextNode.get_new_lines(1, last_sent.end_point):
                             last_sent = nl
                             yield nl
                     new_lines_after.pop(0)
@@ -80,11 +75,10 @@ class LatexDocument(TreeSitterDocument):
                 # check if we need newlines due to linebreaks in source
                 if (
                     last_sent is not None
-                    and last_sent.text[-1] != '\n'
                     and node[0].start_point[0] - last_sent.end_point[0] > 1
                     and '' in lines[last_sent.end_point[0]+1:node[0].start_point[0]]
                 ):
-                    for nl_node in TextNode.get_new_lines(2, last_sent.end_point):
+                    for nl_node in TextNode.get_new_lines(1, last_sent.end_point):
                         yield nl_node
                         last_sent = nl_node
 
@@ -110,17 +104,23 @@ class LatexDocument(TreeSitterDocument):
 
                 last_sent = TextNode.from_ts_node(node[0])
                 yield last_sent
-            elif node[1] == self.NODE_NEWLINE_BEFORE_AFTER:
-                new_lines_after.append(node[0].end_point)
-                if last_sent is not None:
-                    for nl_node in TextNode.get_new_lines(2, last_sent.end_point):
-                        yield nl_node
-                        last_sent = nl_node
+            elif node[1] == self.NODE_NEWLINE_AFTER_ONE:
+                self._insert_point_in_order(node[0].end_point, new_lines_after)
 
         yield from TextNode.get_new_lines(
             1,
             last_sent.end_point if last_sent else (0, 0)
         )
+
+    @staticmethod
+    def _insert_point_in_order(point, lst, times=1):
+        i = 0
+        length = len(lst)
+        while i < length and lst[i] < point:
+            i += 1
+
+        for _ in range(times):
+            lst.insert(i, point)
 
     def _needs_space_before(self, node, lines, last_sent) -> bool:
         if last_sent is None or last_sent.text[-1] == '\n':
