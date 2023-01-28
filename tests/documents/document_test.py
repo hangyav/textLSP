@@ -113,6 +113,32 @@ def test_get_paragraphs_at_range(content, range, exp):
     assert par_lst == exp
 
 
+@pytest.mark.parametrize('content,interval,exp', [
+    (
+        '1. This is a sentence. Another sentence in a paragraph.\n\n'
+        '2. This is a sentence. Another sentence in a paragraph.\n\n'
+        '3. This is a sentence. Another sentence in a paragraph.\n',
+        Interval(0, 170),  # full document
+        [
+            '1. This is a sentence. Another sentence in a paragraph.\n',
+            '\n',
+            '2. This is a sentence. Another sentence in a paragraph.\n',
+            '\n',
+            '3. This is a sentence. Another sentence in a paragraph.\n',
+        ],
+    ),
+])
+def test_get_paragraphs_at_offset(content, interval, exp):
+    doc = BaseDocument('DUMMY_URL', content)
+    par_lst = doc.paragraphs_at_offset(interval.start, interval.length)
+    par_lst = [
+        doc.source[pos.start:pos.start+pos.length]
+        for pos in par_lst
+    ]
+
+    assert par_lst == exp
+
+
 @pytest.mark.parametrize('content,offset,length,exp', [
     (
         '1. This is a sentence. Another sentence in a paragraph.\n'

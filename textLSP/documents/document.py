@@ -163,6 +163,20 @@ class BaseDocument(Document):
             return None
         return self.paragraph_at_offset(offset, cleaned=cleaned)
 
+    def paragraphs_at_offset(self, offset: int, min_length=0, cleaned=False) -> List[Interval]:
+        res = list()
+        doc_lenght = len(self.cleaned_source if cleaned else self.source)
+        length = 0
+
+        while offset < doc_lenght and (length < min_length or length == 0):
+            paragraph = self.paragraph_at_offset(offset, cleaned=cleaned)
+            res.append(paragraph)
+
+            offset = paragraph.start + paragraph.length
+            length += paragraph.length
+
+        return res
+
     def paragraphs_at_range(self, position_range: Range, cleaned=False) -> List[Interval]:
         res = list()
         source = self.cleaned_source if cleaned else self.source

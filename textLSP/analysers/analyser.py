@@ -275,8 +275,17 @@ class Analyser():
             action
             for action in self._code_actions_dict[doc.uri]
             if (
-                action.edit.document_changes[0].edits[0].range.start <= range.start
-                and action.edit.document_changes[0].edits[0].range.end >= range.end
+                (
+                    action.edit.document_changes[0].edits[0].range.start <= range.start
+                    and action.edit.document_changes[0].edits[0].range.end >= range.end
+                )
+                # if it's not reachable by the cursor
+                or (
+                    action.edit.document_changes[0].edits[0].range.start.line == range.start.line
+                    and len(
+                        doc.lines[range.start.line]
+                    ) <= action.edit.document_changes[0].edits[0].range.start.character
+                )
             )
         ]
 

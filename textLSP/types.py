@@ -1,8 +1,9 @@
 import re
 import bisect
 import enum
+import difflib
 
-from typing import Optional, Any
+from typing import Optional, Any, List
 from dataclasses import dataclass
 
 from lsprotocol.types import Position, Range, CodeActionKind
@@ -205,3 +206,34 @@ class OffsetPositionIntervalList():
 class TextLSPCodeActionKind(str, enum.Enum):
     AcceptSuggestion = CodeActionKind.QuickFix + '.accept_suggestion'
     Command = 'command'
+
+
+@dataclass
+class TokenDiff():
+    INSERT = 'insert'
+    DELETE = 'delete'
+    REPLACE = 'replace'
+
+    type: str
+    old_token: str
+    new_token: str
+    offset: int
+    length: int
+
+    @staticmethod
+    def token_level_diff(text1, text2) -> List:
+        tokens1 = text1.split()
+        tokens2 = text2.split()
+        diff = difflib.SequenceMatcher(None, tokens1, tokens2)
+
+        return [
+            TokenDiff(
+                type=item[0],
+                old_token=' '.join(tokens1[item[1]:item[2]]),
+                new_token=' '.join(tokens2[item[3]:item[4]]),
+                offset=0 if item[1] == 0 else len(' '.join(tokens1[:item[1]]))+1,
+                length=len(' '.join(tokens1[item[1]:item[2]])),
+            )
+            for item in diff.get_opcodes()
+            if item[0] != 'equal'
+        ]

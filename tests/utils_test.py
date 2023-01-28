@@ -76,7 +76,99 @@ from textLSP import utils, types
         0,
     ),
 ])
-def test_latex_clean(src, exp, max, min):
+def test_batch_text(src, exp, max, min):
     res = list(utils.batch_text(src, types.TEXT_PASSAGE_PATTERN, max, min))
+
+    assert res == exp
+
+
+@pytest.mark.parametrize('s1,s2,exp', [
+    (
+        'This is a sentence of 47 characters. ',
+        'This is a sentence of 48 characters. ',
+        [
+            types.TokenDiff(
+                types.TokenDiff.REPLACE,
+                '47',
+                '48',
+                22,
+                2
+            ),
+        ],
+    ),
+    (
+        'This is a sentence of 47 characters. ',
+        'That is a sentence of 47 characters. ',
+        [
+            types.TokenDiff(
+                types.TokenDiff.REPLACE,
+                'This',
+                'That',
+                0,
+                4
+            ),
+        ],
+    ),
+    (
+        'This is a sentence of 47 characters. ',
+        'This example is a sentence of 47 characters. ',
+        [
+            types.TokenDiff(
+                types.TokenDiff.INSERT,
+                '',
+                'example',
+                5,
+                0
+            ),
+        ],
+    ),
+    (
+        'This example is a sentence of 47 characters. ',
+        'This is a sentence of 47 characters. ',
+        [
+            types.TokenDiff(
+                types.TokenDiff.DELETE,
+                'example',
+                '',
+                5,
+                7
+            ),
+        ],
+    ),
+    (
+        'This example is a sentence of 47 characters. ',
+        'This is a good sentence of 48 characters. ',
+        [
+            types.TokenDiff(
+                types.TokenDiff.DELETE,
+                'example',
+                '',
+                5,
+                7
+            ),
+            types.TokenDiff(
+                types.TokenDiff.INSERT,
+                '',
+                'good',
+                18,
+                0
+            ),
+            types.TokenDiff(
+                types.TokenDiff.REPLACE,
+                '47',
+                '48',
+                30,
+                2
+            ),
+        ],
+    ),
+    (
+        'This is a sentence of 47 characters. ',
+        'This is a sentence of 47 characters. ',
+        [],
+    ),
+])
+def test_token_diff(s1, s2, exp):
+    res = types.TokenDiff.token_level_diff(s1, s2)
 
     assert res == exp

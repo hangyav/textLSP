@@ -34,6 +34,7 @@ setup(
         'appdirs>=1.4.4',
         'gramformer @ git+https://github.com/PrithivirajDamodaran/Gramformer.git',
         'torch>=1.13.1',
+        'openai>=0.26.4'
     ],
     extras_require={
         'dev': [
