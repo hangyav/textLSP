@@ -47,6 +47,13 @@ from textLSP.documents.org import OrgDocument
         '\n'
         'This is another paragraph.\n'
     ),
+    (
+        '** DONE Task DONE 1\n'
+        '  * DONE This is a list.',
+        #
+        'Task DONE 1\n'
+        'DONE This is a list.\n'
+    ),
 ])
 def test_clean(src, clean):
     doc = OrgDocument(

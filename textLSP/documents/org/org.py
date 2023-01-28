@@ -1,11 +1,13 @@
 from typing import Generator
-from tree_sitter import Tree
+from tree_sitter import Tree, Node
 
 from ..document import TreeSitterDocument, TextNode
 
 
 class OrgDocument(TreeSitterDocument):
     CONFIGURATION_TODO_KEYWORDS = 'org_todo_keywords'
+
+    DEFAULT_TODO_KEYWORDS = {'TODO', 'DONE'}
 
     EXPR = 'expr'
     HEADLINE = 'headline'
@@ -40,7 +42,10 @@ class OrgDocument(TreeSitterDocument):
             **kwargs,
         )
         self._query = self._build_query()
-        keywords = self.config.setdefault(self.CONFIGURATION_TODO_KEYWORDS, set())
+        keywords = self.config.setdefault(
+            self.CONFIGURATION_TODO_KEYWORDS,
+            self.DEFAULT_TODO_KEYWORDS,
+        )
         if type(keywords) != set:
             self.config[self.CONFIGURATION_TODO_KEYWORDS] = set(keywords)
 
@@ -107,7 +112,7 @@ class OrgDocument(TreeSitterDocument):
                             ),
                         )
 
-                if node[0].text.decode('utf-8') not in self.config[self.CONFIGURATION_TODO_KEYWORDS]:
+                if self._valid_content_node(node[0]):
                     last_sent = TextNode.from_ts_node(node[0])
                     yield last_sent
             elif node[1] == self.NODE_NEWLINE_AFTER_ONE:
@@ -116,6 +121,15 @@ class OrgDocument(TreeSitterDocument):
         yield from TextNode.get_new_lines(
             1,
             last_sent.end_point if last_sent else (0, 0)
+        )
+
+    def _valid_content_node(self, node: Node):
+        return not (
+            node.parent is not None
+            and node.parent.parent is not None
+            and node.parent.parent.type == self.HEADLINE
+            and node.text.decode('utf-8') in self.config[self.CONFIGURATION_TODO_KEYWORDS]
+            and self.lines[node.start_point[0]][:node.start_point[1]] == '*' * max(1, node.start_point[1]-1) + ' '
         )
 
     @staticmethod
