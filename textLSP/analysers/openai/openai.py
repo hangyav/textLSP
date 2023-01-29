@@ -1,13 +1,18 @@
 import logging
 import openai
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from lsprotocol.types import (
         Diagnostic,
         Range,
         Position,
         TextEdit,
         CodeAction,
+        WorkspaceEdit,
+        Command,
+        CodeActionParams,
+        TextDocumentEdit,
+        VersionedTextDocumentIdentifier,
 )
 from pygls.server import LanguageServer
 
@@ -25,11 +30,15 @@ class OpenAIAnalyser(Analyser):
     CONFIGURATION_MODEL = 'model'
     CONFIGURATION_EDIT_INSTRUCTION = 'edit_instruction'
     CONFIGURATION_TEMPERATURE = 'temperature'
+    CONFIGURATION_MAX_TOKEN = 'max_token'
+    CONFIGURATION_PROMPT_MAGIC = 'prompt_magic'
 
     SETTINGS_DEFAULT_EDIT_MODEL = 'text-davinci-edit-001'
     SETTINGS_DEFAULT_MODEL = 'text-babbage-001'
     SETTINGS_DEFAULT_EDIT_INSTRUCTION = 'Fix the spelling and grammar errors'
     SETTINGS_DEFAULT_TEMPERATURE = 0
+    SETTINGS_DEFAULT_MAX_TOKEN = 16
+    SETTINGS_DEFAULT_PROMPT_MAGIC = '%OPENAI% '
     SETTINGS_DEFAULT_CHECK_ON = {
         Analyser.CONFIGURATION_CHECK_ON_OPEN: False,
         Analyser.CONFIGURATION_CHECK_ON_CHANGE: False,
@@ -52,6 +61,19 @@ class OpenAIAnalyser(Analyser):
         if len(res.choices) > 0:
             return TokenDiff.token_level_diff(text, res.choices[0]['text'].strip())
         return []
+
+    def _generate(self, text) -> Optional[str]:
+        res = openai.Completion.create(
+            model=self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL),
+            prompt=text,
+            temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
+            max_tokens=self.config.get(self.CONFIGURATION_MAX_TOKEN, self.SETTINGS_DEFAULT_MAX_TOKEN),
+        )
+
+        if len(res.choices) > 0:
+            return res.choices[0]['text'].strip()
+
+        return None
 
     def _analyse(self, text, doc, offset=0) -> Tuple[List[Diagnostic], List[CodeAction]]:
         diagnostics = list()
@@ -165,3 +187,79 @@ class OpenAIAnalyser(Analyser):
         ]
 
         return diagnostics, code_actions
+
+    def command_generate(
+            self,
+            uri: str,
+            prompt: str,
+            position: str,
+            new_line=True
+    ):
+        doc = self.get_document(uri)
+
+        new_text = self._generate(prompt)
+        new_text += '\n'
+        position = Position(**eval(position))
+        range = Range(
+            start=position,
+            end=position,
+        )
+
+        edit = WorkspaceEdit(
+            document_changes=[
+                TextDocumentEdit(
+                    text_document=VersionedTextDocumentIdentifier(
+                        uri=doc.uri,
+                        version=doc.version,
+                    ),
+                    edits=[
+                        TextEdit(
+                            range=range,
+                            new_text=new_text,
+                        ),
+
+                    ]
+                )
+            ]
+        )
+        self.language_server.apply_edit(edit, 'textlsp.openai.generate')
+
+    def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
+        doc = self.get_document(params)
+        res = super().get_code_actions(params)
+
+        if params.range.start != params.range.end:
+            return res
+
+        line = doc.lines[params.range.start.line].strip()
+        magic = self.config.get(self.CONFIGURATION_PROMPT_MAGIC, self.SETTINGS_DEFAULT_PROMPT_MAGIC)
+        if magic in line:
+            if res is None:
+                res = list()
+
+            paragraph = doc.paragraph_at_position(params.range.start, False)
+            position = doc.position_at_offset(paragraph.start+paragraph.length, False)
+            position = str({'line': position.line, 'character': position.character})
+            prompt = doc.text_at_offset(paragraph.start, paragraph.length, False)
+            prompt = prompt[prompt.find(magic)+len(magic):]
+            title = 'Prompt OpenAI'
+            res.append(
+                self.build_command_action(
+                    doc=doc,
+                    title=title,
+                    command=Command(
+                        title=title,
+                        command=self.language_server.COMMAND_CUSTOM,
+                        arguments=[{
+                            'command': 'generate',
+                            'analyser': self.name,
+                            'uri': doc.uri,
+                            'prompt': prompt,
+                            'position': position,
+                            'new_line': True
+                        }],
+                    ),
+                )
+            )
+
+        return res

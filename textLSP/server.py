@@ -58,6 +58,7 @@ class TextLSPLanguageServer(LanguageServer):
     CONFIGURATION_DOCUMENTS = 'documents'
 
     COMMAND_ANALYSE = 'analyse'
+    COMMAND_CUSTOM = 'custom_command'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -164,3 +165,8 @@ def code_action(
 @SERVER.command(TextLSPLanguageServer.COMMAND_ANALYSE)
 async def command_analyse(ls: TextLSPLanguageServer, *args):
     await ls.analyser_handler.command_analyse(*args)
+
+
+@SERVER.command(TextLSPLanguageServer.COMMAND_CUSTOM)
+async def command_custom_command(ls: TextLSPLanguageServer, *args):
+    await ls.analyser_handler.command_custom_command(*args)

@@ -17,7 +17,7 @@ from pygls.workspace import Document
 from .. import analysers
 from .analyser import Analyser, AnalysisError
 from ..utils import get_class
-from ..types import ConfigurationError, Interval
+from ..types import ConfigurationError
 
 
 logger = logging.getLogger(__name__)
@@ -192,6 +192,21 @@ class AnalyserHandler():
             self.analysers[analyser].command_analyse(*args)
         else:
             await self._submit_task(self._command_analyse, args)
+
+    async def command_custom_command(self, *args):
+        args = args[0][0]
+        assert 'analyser' in args
+        analyser = self.analysers[args.pop('analyser')]
+        command = args.pop('command')
+        ext_command = f'command_{command}'
+
+        if hasattr(analyser, ext_command):
+            getattr(analyser, ext_command)(**args)
+        else:
+            self.language_server.show_message(
+                str(f'No custom command supported by {analyser}: {command}'),
+                MessageType.Error,
+            )
 
     def update_document(self, doc: Document, change: TextDocumentContentChangeEvent):
         for name, analyser in self.analysers.items():
