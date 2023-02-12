@@ -13,6 +13,9 @@ from lsprotocol.types import (
         CodeActionParams,
         TextDocumentEdit,
         VersionedTextDocumentIdentifier,
+        CompletionParams,
+        CompletionList,
+        CompletionItem,
 )
 from pygls.server import LanguageServer
 
@@ -263,3 +266,20 @@ class OpenAIAnalyser(Analyser):
             )
 
         return res
+
+    def get_completions(self, params: Optional[CompletionParams] = None) -> Optional[CompletionList]:
+        if params.position == Position(line=0, character=0):
+            return None
+
+        doc = self.get_document(params)
+        line = doc.lines[params.position.line]
+        magic = self.config.get(self.CONFIGURATION_PROMPT_MAGIC, self.SETTINGS_DEFAULT_PROMPT_MAGIC)
+
+        if len(line[:params.position.character].strip()) == 0:
+            return [
+                CompletionItem(
+                    label=magic,
+                    detail='OpenAI magic command for text generation based on'
+                    ' the prompt that follows.'
+                )
+            ]

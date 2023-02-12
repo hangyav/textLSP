@@ -12,6 +12,7 @@ from lsprotocol.types import (
     TEXT_DOCUMENT_CODE_ACTION,
     WORKSPACE_DID_CHANGE_CONFIGURATION,
     INITIALIZE,
+    TEXT_DOCUMENT_COMPLETION,
 )
 from lsprotocol.types import (
     DidOpenTextDocumentParams,
@@ -25,6 +26,9 @@ from lsprotocol.types import (
     CodeActionKind,
     CodeActionOptions,
     CodeAction,
+    CompletionList,
+    CompletionOptions,
+    CompletionParams,
 )
 from .workspace import TextLSPWorkspace
 from .utils import merge_dicts, get_textlsp_version
@@ -170,3 +174,14 @@ async def command_analyse(ls: TextLSPLanguageServer, *args):
 @SERVER.command(TextLSPLanguageServer.COMMAND_CUSTOM)
 async def command_custom_command(ls: TextLSPLanguageServer, *args):
     await ls.analyser_handler.command_custom_command(*args)
+
+
+@SERVER.feature(
+    TEXT_DOCUMENT_COMPLETION,
+    CompletionOptions(trigger_characters=[' '])
+)
+def completions(
+    ls: TextLSPLanguageServer,
+    params: Optional[CompletionParams] = None
+) -> CompletionList:
+    return ls.analyser_handler.get_completions(params)

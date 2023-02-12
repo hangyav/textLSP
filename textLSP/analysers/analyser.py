@@ -22,6 +22,8 @@ from lsprotocol.types import (
         Command,
         VersionedTextDocumentIdentifier,
         MessageType,
+        CompletionParams,
+        CompletionList,
 )
 
 from ..documents.document import BaseDocument, ChangeTracker
@@ -393,6 +395,9 @@ class Analyser():
         else:
             self._command_analyse(doc)
             self._checked_documents.add(args['uri'])
+
+    def get_completions(self, params: Optional[CompletionParams] = None) -> Optional[CompletionList]:
+        return None
 
 
 class AnalysisError(Exception):

@@ -11,6 +11,8 @@ from lsprotocol.types import (
         TextDocumentContentChangeEvent,
         CodeActionParams,
         CodeAction,
+        CompletionParams,
+        CompletionList,
 )
 from pygls.workspace import Document
 
@@ -211,3 +213,15 @@ class AnalyserHandler():
     def update_document(self, doc: Document, change: TextDocumentContentChangeEvent):
         for name, analyser in self.analysers.items():
             analyser.update_document(doc, change)
+
+    def get_completions(self, params: Optional[CompletionParams] = None) -> CompletionList:
+        comp_lst = list()
+        for _, analyser in self.analysers.items():
+            tmp = analyser.get_completions(params)
+            if tmp is not None and len(tmp) > 0:
+                comp_lst.extend(tmp)
+
+        return CompletionList(
+            is_incomplete=False,
+            items=comp_lst,
+        )
