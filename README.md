@@ -42,7 +42,6 @@ Due to potential costs turning off automatic analysis if suggested.
 * [OpenAI](https://openai.com/api): Supports text correction and text generation through a magic command in the text file, e.g.:
     * `%OPENAI% Write a sentence about a cat.`
 * [GrammarBot](https://rapidapi.com/grammarbot/api/grammarbot): The GrammarBot API provides spelling and grammar checking.
-    * TODO: still under development
 
 # Configuration
 

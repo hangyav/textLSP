@@ -185,13 +185,26 @@ class AnalyserHandler():
         analyser: Analyser,
         args,
     ):
-        analyser.command_analyse(*args)
+        try:
+            analyser.command_analyse(*args)
+        except AnalysisError as e:
+            self.language_server.show_message(
+                str(f'{analyser_name}: {e}'),
+                MessageType.Error,
+            )
 
     async def command_analyse(self, *args):
         args = args[0]
         if 'analyser' in args[0]:
-            analyser = args[0].pop('analyser')
-            self.analysers[analyser].command_analyse(*args)
+            analyser_name = args[0].pop('analyser')
+            analyser = self.analysers[analyser_name]
+            try:
+                analyser.command_analyse(*args)
+            except AnalysisError as e:
+                self.language_server.show_message(
+                    str(f'{analyser_name}: {e}'),
+                    MessageType.Error,
+                )
         else:
             await self._submit_task(self._command_analyse, args)
 
