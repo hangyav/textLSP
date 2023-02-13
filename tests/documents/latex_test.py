@@ -70,6 +70,7 @@ from textLSP.documents.latex import LatexDocument
         '\\section{Introduction}\n'
         'This is a, sentence with a comma.\n',
         # XXX This seems to be a TS grammar bug.
+        # https://github.com/latex-lsp/tree-sitter-latex/issues/73
         # 'Introduction\n'
         # '\n'
         # 'This is a, sentence with a comma.\n'
@@ -96,6 +97,18 @@ from textLSP.documents.latex import LatexDocument
         'Paragraph\n'
         '\n'
         'This is a sentence.\n'
+    ),
+    (
+        '\\section{Introduction}\n'
+        'This is the state-of-the-art sentence.\n',
+        # XXX This seems to be a TS grammar bug.
+        # https://github.com/latex-lsp/tree-sitter-latex/issues/74
+        # 'Introduction\n'
+        # '\n'
+        # 'This is the state-of-the-art sentence.\n',
+        'Introduction\n'
+        '\n'
+        'This is the stateoftheart sentence.\n',
     ),
 ])
 def test_latex_clean(src, clean):
