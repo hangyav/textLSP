@@ -108,7 +108,26 @@ class LatexDocument(TreeSitterDocument):
                             ),
                         )
 
-                last_sent = TextNode.from_ts_node(node[0])
+                ###############################################################
+                # XXX This is a workaround to handle the issues related to
+                # commas and hyphens in the TS grammar. See:
+                # - https://github.com/latex-lsp/tree-sitter-latex/issues/73
+                # - https://github.com/latex-lsp/tree-sitter-latex/issues/74
+                # and remove this block when the issues are fixed.
+                line = self.lines[node[0].end_point[0]]
+                char = None
+                if node[0].end_point[1] < len(line):
+                    char = line[node[0].end_point[1]]
+
+                if char in {',', '-'}:
+                    last_sent = TextNode(
+                        text=node[0].text.decode('utf-8')+char,
+                        start_point=node[0].start_point,
+                        end_point=(node[0].end_point[0], node[0].end_point[1])  # node.end_point[1]-1+1
+                    )
+                else:
+                    ###########################################################
+                    last_sent = TextNode.from_ts_node(node[0])
                 yield last_sent
             elif node[1] == self.NODE_NEWLINE_BEFORE_AFTER:
                 new_lines_after.append(node[0].end_point)
