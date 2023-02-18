@@ -1,18 +1,11 @@
 # textLSP
 Language server for text spell and grammar check with various AI tools.
 
-# Install
-```
-pip install git+https://github.com/hangyav/textLSP
-```
+_This tool is in early development._
+
+![textLSP](https://github.com/hangyav/textLSP/raw/main/images/textLSP.png)
 
 # Features
-
-## Supported File Types
-
-* latex
-* org
-* any other file types as plain text
 
 ## LSP features
 
@@ -20,7 +13,14 @@ pip install git+https://github.com/hangyav/textLSP
 * Code actions:
     * Fix suggestions
     * Analyze paragraph with a selected passive analyzer (if the analyzer does not check on save or change)
+        <details><summary>Showcase</summary>
+            <script async id="asciicast-Vr8OqiC7uOtXt46mDWCS75Fvp" src="https://asciinema.org/a/Vr8OqiC7uOtXt46mDWCS75Fvp.js"></script>
+        </details>
     * Only on the first character of the first line: analyze the whole document if it was not fully checked yet
+        <details><summary>Showcase</summary>
+            <script async id="asciicast-GtlfiXgm0ei9A4fTzwr6ERtXi" src="https://asciinema.org/a/GtlfiXgm0ei9A4fTzwr6ERtXi.js"></script>
+        </details>
+
     * Custom actions defined by a given analyzer (e.g. prompt OpenAI)
 
 ## Analyzers
@@ -34,18 +34,57 @@ The following tools run on the local system:
 
 ### Tools using remote services
 
-**NOTE: THE RELATED APIS REQUIRE REGISTRATION AND ARE NOT FREE TO USE! USE THESE ANALYZERS ON YOUR OWN RESPONSIBILITY! THE AUTHORS OF TEXTLSP DO NOT ASSUME ANY RESPONSIBILITY FOR THE COSTS INCURRED!**
+**DISCLAIMER: THE RELATED APIS REQUIRE REGISTRATION AND ARE NOT FREE TO USE! USE THESE ANALYZERS ON YOUR OWN RESPONSIBILITY! THE AUTHORS OF TEXTLSP DO NOT ASSUME ANY RESPONSIBILITY FOR THE COSTS INCURRED!**
 
 The following tools use remote text APIs.
 Due to potential costs turning off automatic analysis if suggested.
 
-* [OpenAI](https://openai.com/api): Supports text correction and text generation through a magic command in the text file, e.g.:
-    * `%OPENAI% Write a sentence about a cat.`
+* [OpenAI](https://openai.com/api): Supports text correction as well as text generation through a magic command in the text file.
+    <details><summary>Generation showcase</summary>
+        <script async id="asciicast-Zdln0mCeh9nihyzZNOlcyuxLO" src="https://asciinema.org/a/Zdln0mCeh9nihyzZNOlcyuxLO.js"></script>
+    </details>
 * [GrammarBot](https://rapidapi.com/grammarbot/api/grammarbot): The GrammarBot API provides spelling and grammar checking.
 
-# Configuration
+## Supported File Types
 
-Example configuration in lua for nvim, other editors should be set up accordingly.
+* latex
+* org
+* any other file types as plain text
+
+# Setup
+
+## Install
+```
+pip install textLSP
+```
+
+For the latest version:
+```
+pip install git+https://github.com/hangyav/textLSP
+```
+
+## Running
+Simply run:
+```
+textlsp
+```
+
+Since some analyzers are computation intensive, consider running it on a server using the TCP interface:
+```
+textlsp --address 0.0.0.0 --port 1234
+```
+or simply over ssh (with ssh key) if the client doesn't support it:
+```
+ssh <server> textlsp
+```
+
+## Configuration
+
+Using textLSP within an editor depends on the editor of choice.
+For a few examples how to setup language servers in general in some of the popular editors see [here](https://github.com/openlawlibrary/pygls/tree/master/examples/hello-world#editor-configurations) or take a look at the related documentation of your editor.
+
+By default all analyzers are disabled in textLSP, they have to be turned on in the settings.
+Example configuration in lua for nvim (other editors should be set up accordingly):
 
 ```lua
 textLSP = {
@@ -60,6 +99,7 @@ textLSP = {
         },
         gramformer = {
             enabled = true,
+            gpu = false,
             check_text = {
                 on_open = false,
                 on_save = true,
