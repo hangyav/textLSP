@@ -17,6 +17,7 @@ setup(
     url="https://github.com/hangyav/textLSP",
     packages=find_packages(include=['textLSP*']),
     long_description=read('README.md'),
+    long_description_content_type="text/markdown",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -32,7 +33,6 @@ setup(
         'tree_sitter>=0.20.1',
         'gitpython>=3.1.29',
         'appdirs>=1.4.4',
-        'gramformer @ git+https://github.com/PrithivirajDamodaran/Gramformer.git',
         'torch>=1.13.1',
         'openai>=0.26.4'
     ],

@@ -31,6 +31,9 @@ The following tools run on the local system:
 
 * [LanguageTool](https://languagetool.org): Mainly for development purposes, see [ltex-ls](https://github.com/valentjn/ltex-ls) for a more mature implementation.
 * [Gramformer](https://github.com/PrithivirajDamodaran/Gramformer): Neural network based system.
+    * Gramformer needs to be installed manually:
+
+      ```pip install git+https://github.com/PrithivirajDamodaran/Gramformer.git```
 
 ### Tools using remote services
 
@@ -98,6 +101,7 @@ textLSP = {
             }
         },
         gramformer = {
+            -- gramformer dependency needs to be installed manually
             enabled = true,
             gpu = false,
             check_text = {
