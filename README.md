@@ -3,7 +3,7 @@ Language server for text spell and grammar check with various AI tools.
 
 _This tool is in early development._
 
-![textLSP](https://github.com/hangyav/textLSP/raw/main/images/textLSP.png)
+![textLSP](https://user-images.githubusercontent.com/414596/219856412-8095caa5-9ce6-49fe-9713-78d234837ac4.png)
 
 # Features
 
@@ -14,11 +14,11 @@ _This tool is in early development._
     * Fix suggestions
     * Analyze paragraph with a selected passive analyzer (if the analyzer does not check on save or change)
         <details><summary>Showcase</summary>
-            <img src="https://github.com/hangyav/textLSP/raw/main/images/textLSP_paragraph_check_action.gif" height=80% width=80%/>
+           <img src="https://user-images.githubusercontent.com/414596/219856438-0810eb43-929c-4bc3-811e-2ab53a5b2ae3.gif" height=80% width=80%/>
         </details>
     * Only on the first character of the first line: analyze the whole document if it was not fully checked yet
         <details><summary>Showcase</summary>
-            <img src="https://github.com/hangyav/textLSP/raw/main/images/textLSP_full_document_action.gif" height=80% width=80%/>
+           <img src="https://user-images.githubusercontent.com/414596/219856461-406c1e8f-ef71-4b6d-9270-6955320bd6aa.gif" height=80% width=80%/>
         </details>
 
     * Custom actions defined by a given analyzer (e.g. prompt OpenAI)
@@ -41,7 +41,7 @@ Due to potential costs turning off automatic analysis if suggested.
 
 * [OpenAI](https://openai.com/api): Supports text correction as well as text generation through a magic command in the text file.
     <details><summary>Generation showcase</summary>
-        <img src="https://github.com/hangyav/textLSP/raw/main/images/textLSP_openai_generate_action.gif" height=80% width=80%/>
+        <img src="https://user-images.githubusercontent.com/414596/219856479-b85b5c2d-6158-44be-9063-12254b76e39c.gif" height=80% width=80%/>
     </details>
 * [GrammarBot](https://rapidapi.com/grammarbot/api/grammarbot): The GrammarBot API provides spelling and grammar checking.
 
