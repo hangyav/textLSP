@@ -1,5 +1,5 @@
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 # Utility function to read the README file.
@@ -9,13 +9,13 @@ def read(fname):
 
 setup(
     name="textLSP",
-    version="0.0.1",
+    version="0.1.0",
     author="Viktor Hangya",
     author_email="hangyav@gmail.com",
     description=("Language server for text spell and grammar check with various tools."),
     license="GPLv3",
     url="https://github.com/hangyav/textLSP",
-    packages=['textLSP'],
+    packages=find_packages(include=['textLSP*']),
     long_description=read('README.md'),
     classifiers=[
         "Programming Language :: Python :: 3",
