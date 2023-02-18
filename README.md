@@ -14,11 +14,11 @@ _This tool is in early development._
     * Fix suggestions
     * Analyze paragraph with a selected passive analyzer (if the analyzer does not check on save or change)
         <details><summary>Showcase</summary>
-            <script async id="asciicast-Vr8OqiC7uOtXt46mDWCS75Fvp" src="https://asciinema.org/a/Vr8OqiC7uOtXt46mDWCS75Fvp.js"></script>
+            <img src="https://github.com/hangyav/textLSP/raw/main/images/textLSP_paragraph_check_action.gif" height=80% width=80%/>
         </details>
     * Only on the first character of the first line: analyze the whole document if it was not fully checked yet
         <details><summary>Showcase</summary>
-            <script async id="asciicast-GtlfiXgm0ei9A4fTzwr6ERtXi" src="https://asciinema.org/a/GtlfiXgm0ei9A4fTzwr6ERtXi.js"></script>
+            <img src="https://github.com/hangyav/textLSP/raw/main/images/textLSP_full_document_action.gif" height=80% width=80%/>
         </details>
 
     * Custom actions defined by a given analyzer (e.g. prompt OpenAI)
@@ -41,7 +41,7 @@ Due to potential costs turning off automatic analysis if suggested.
 
 * [OpenAI](https://openai.com/api): Supports text correction as well as text generation through a magic command in the text file.
     <details><summary>Generation showcase</summary>
-        <script async id="asciicast-Zdln0mCeh9nihyzZNOlcyuxLO" src="https://asciinema.org/a/Zdln0mCeh9nihyzZNOlcyuxLO.js"></script>
+        <img src="https://github.com/hangyav/textLSP/raw/main/images/textLSP_openai_generate_action.gif" height=80% width=80%/>
     </details>
 * [GrammarBot](https://rapidapi.com/grammarbot/api/grammarbot): The GrammarBot API provides spelling and grammar checking.
 
