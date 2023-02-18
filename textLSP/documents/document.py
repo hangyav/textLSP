@@ -52,6 +52,12 @@ class BaseDocument(Document):
                 )
             pos += line_len
 
+        assert offset == pos, 'Offset it over the document\'s end!'
+        return Position(
+            line=lidx,
+            character=offset-pos
+        )
+
     def range_at_offset(self, offset: int, length: int, cleaned=False) -> Range:
         start = self.position_at_offset(offset)
         if start is None:
