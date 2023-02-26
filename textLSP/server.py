@@ -33,6 +33,7 @@ from lsprotocol.types import (
 from .workspace import TextLSPWorkspace
 from .utils import merge_dicts, get_textlsp_version
 from .analysers.handler import AnalyserHandler
+from .types import ProgressBar
 
 
 logger = logging.getLogger(__name__)
@@ -101,6 +102,9 @@ class TextLSPLanguageServer(LanguageServer):
     def update_settings(self, settings):
         if settings is None or len(settings) == 0:
             return
+
+        progress = ProgressBar(self, 'Configuration...')
+
         self.settings = merge_dicts(self.settings, settings)
         if self.get_analyser_settings(settings):
             # update only if there was any update related to it
@@ -112,6 +116,7 @@ class TextLSPLanguageServer(LanguageServer):
             self.lsp.workspace.update_settings(
                 self.get_document_settings()
             )
+        progress.end('Finished')
 
     def publish_stored_diagnostics(self, doc: Document):
         diagnostics = list()

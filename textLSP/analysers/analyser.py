@@ -28,7 +28,7 @@ from lsprotocol.types import (
 
 from ..documents.document import BaseDocument, ChangeTracker
 from ..utils import merge_dicts
-from ..types import Interval, TextLSPCodeActionKind
+from ..types import Interval, TextLSPCodeActionKind, ProgressBar
 
 
 class Analyser():
@@ -63,8 +63,10 @@ class Analyser():
         self.init_document_items(doc)
         self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
         if self.should_run_on(Analyser.CONFIGURATION_CHECK_ON_OPEN):
+            progress = ProgressBar(self.language_server, f'{self.name} checking...')
             self._did_open(doc)
             self._checked_documents.add(doc.uri)
+            progress.end('Finished!')
 
     def _did_change(self, doc: Document, changes: List[Interval]):
         raise NotImplementedError()
@@ -176,7 +178,9 @@ class Analyser():
                 )
             else:
                 changes = self._content_change_dict[doc.uri].get_changes()
+                progress = ProgressBar(self.language_server, f'{self.name} checking...')
                 self._did_change(doc, changes)
+                progress.end('Finished!')
                 self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
         elif len(line_shifts) > 0:
             self.language_server.publish_stored_diagnostics(doc)
@@ -195,7 +199,9 @@ class Analyser():
                     )
                 else:
                     changes = self._content_change_dict[doc.uri].get_changes()
+                    progress = ProgressBar(self.language_server, f'{self.name} checking...')
                     self._did_change(doc, changes)
+                    progress.end('Finished!')
                     self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
 
     def _did_close(self, doc: Document):

@@ -2,11 +2,19 @@ import re
 import bisect
 import enum
 import difflib
+import uuid
 
 from typing import Optional, Any, List
 from dataclasses import dataclass
 
-from lsprotocol.types import Position, Range, CodeActionKind
+from lsprotocol.types import (
+    Position,
+    Range,
+    CodeActionKind,
+    WorkDoneProgressBegin,
+    WorkDoneProgressReport,
+    WorkDoneProgressEnd,
+)
 
 
 TEXT_PASSAGE_PATTERN = re.compile('[.?!] |\\n')
@@ -243,4 +251,37 @@ class TokenDiff():
         return (
             f'{self.type}: {self.old_token} -> {self.new_token} '
             f'({self.offset}, {self.length})'
+        )
+
+
+class ProgressBar():
+    def __init__(self, ls, message=None, percentage=0):
+        self.token = str(uuid.uuid4())
+        self.ls = ls
+        self.ls.progress.create(self.token)
+        if message is not None:
+            self.begin(message, percentage)
+
+    def begin(self, title, percentage=0):
+        self.ls.progress.begin(
+            self.token,
+            WorkDoneProgressBegin(
+                title=title,
+                percentage=percentage,
+            )
+        )
+
+    def update(self, message, percentage=0):
+        self.ls.progress.report(
+            self.token,
+            WorkDoneProgressReport(
+                message=message,
+                percentage=percentage
+            ),
+        )
+
+    def end(self, message):
+        self.ls.progress.end(
+            self.token,
+            WorkDoneProgressEnd(message=message)
         )
