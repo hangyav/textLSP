@@ -69,6 +69,7 @@ class TextLSPLanguageServer(LanguageServer):
         self.settings = dict()
         self.init_settings()
         self.analyser_handler = AnalyserHandler(self)
+        logger.warning('TextLSP initialized!')
 
     def init_settings(self):
         self.settings.setdefault(self.CONFIGURATION_SECTION, dict())

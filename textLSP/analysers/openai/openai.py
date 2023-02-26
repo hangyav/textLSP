@@ -275,7 +275,8 @@ class OpenAIAnalyser(Analyser):
         line = doc.lines[params.position.line]
         magic = self.config.get(self.CONFIGURATION_PROMPT_MAGIC, self.SETTINGS_DEFAULT_PROMPT_MAGIC)
 
-        if len(line[:params.position.character].strip()) == 0:
+        line_prefix = line[:params.position.character].strip()
+        if len(line_prefix) == 0 or line_prefix in magic:
             return [
                 CompletionItem(
                     label=magic,
