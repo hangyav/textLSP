@@ -285,7 +285,7 @@ class Analyser():
                 or (
                     action.edit.document_changes[0].edits[0].range.start.line == range.start.line
                     and len(
-                        doc.lines[range.start.line]
+                        doc.lines[range.start.line].strip()
                     ) <= action.edit.document_changes[0].edits[0].range.start.character
                 )
             )

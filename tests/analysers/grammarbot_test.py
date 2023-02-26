@@ -164,7 +164,7 @@ def analyser():
         ],
     ),
 ])
-def test_latex_clean(doc, analyses, text_sections, exp, analyser):
+def test_analyses(doc, analyses, text_sections, exp, analyser):
     res_diag, res_action = analyser._handle_analyses(doc, analyses, text_sections)
 
     assert [diag.range for diag in res_diag] == exp

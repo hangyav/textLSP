@@ -34,6 +34,7 @@ The following tools run on the local system:
     * Gramformer needs to be installed manually:
 
       ```pip install git+https://github.com/PrithivirajDamodaran/Gramformer.git```
+* hf_checker: Huggingface `text2text-generation` pipline based analyser. See the [flan-t5-large-grammar-synthesis](https://huggingface.co/pszemraj/flan-t5-large-grammar-synthesis) model for an example.
 
 ### Tools using remote services
 
@@ -104,6 +105,18 @@ textLSP = {
             -- gramformer dependency needs to be installed manually
             enabled = true,
             gpu = false,
+            check_text = {
+                on_open = false,
+                on_save = true,
+                on_change = false,
+            }
+        },
+        hf_checker = {
+            enabled = true,
+            gpu = false,
+            model='pszemraj/flan-t5-large-grammar-synthesis',
+            -- model='pszemraj/grammar-synthesis-large',
+            min_length=40,
             check_text = {
                 on_open = false,
                 on_save = true,

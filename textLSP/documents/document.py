@@ -63,6 +63,12 @@ class BaseDocument(Document):
         if start is None:
             return None
 
+        if length == 0:
+            return Range(
+                start=start,
+                end=start,
+            )
+
         length = start.character + length
         lines = self.cleaned_lines if cleaned else self.lines
         for lidx, line in enumerate(lines[start.line:], start.line):
@@ -391,6 +397,12 @@ class TreeSitterDocument(CleanableDocument):
             return super().range_at_offset(offset, length, cleaned)
 
         start = self.position_at_offset(offset, cleaned)
+        if length == 0:
+            return Range(
+                start=start,
+                end=start,
+            )
+
         offset += length
         item = self._text_intervals.get_interval_at_offset(offset-1)
         item_end = item.offset_interval.start + item.offset_interval.length

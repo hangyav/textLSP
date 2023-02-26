@@ -34,7 +34,8 @@ setup(
         'gitpython>=3.1.29',
         'appdirs>=1.4.4',
         'torch>=1.13.1',
-        'openai>=0.26.4'
+        'openai>=0.26.4',
+        'transformers>=4.25.1',
     ],
     extras_require={
         'dev': [

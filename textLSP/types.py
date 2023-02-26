@@ -10,6 +10,7 @@ from lsprotocol.types import Position, Range, CodeActionKind
 
 
 TEXT_PASSAGE_PATTERN = re.compile('[.?!] |\\n')
+LINE_PATTERN = re.compile('\\n')
 
 
 class ConfigurationError(Exception):
@@ -237,3 +238,9 @@ class TokenDiff():
             for item in diff.get_opcodes()
             if item[0] != 'equal'
         ]
+
+    def __str__(self):
+        return (
+            f'{self.type}: {self.old_token} -> {self.new_token} '
+            f'({self.offset}, {self.length})'
+        )
