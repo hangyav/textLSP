@@ -190,7 +190,7 @@ class OffsetPositionIntervalList():
             return idx
         if position.character < self._position_start_character[idx]:
             return None if strict else idx
-        # if position.character > self._position_end_character[idx]
+
         return None if strict else min(idx+1, length-1)
 
     def get_interval_at_position(self, position: Position, strict=True) -> OffsetPositionInterval:

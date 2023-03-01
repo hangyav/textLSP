@@ -306,211 +306,211 @@ def test_get_paragraphs_at_range(content, range, exp):
 
 
 @pytest.mark.parametrize('content,edits,exp', [
-    # (
-    #     '\\documentclass[11pt]{article}\n'
-    #     '\\begin{document}\n'
-    #     '\n'
-    #     '\\section{Introduction}\n'
-    #     '\n'
-    #     'This is a sentence.\n'
-    #     '\n'
-    #     '\\end{document}',
-    #     [
-    #         TextDocumentContentChangeEvent_Type1(
-    #             # delete 'o' from Introduction
-    #             range=Range(
-    #                 start=Position(
-    #                     line=3,
-    #                     character=13,
-    #                 ),
-    #                 end=Position(
-    #                     line=3,
-    #                     character=14,
-    #                 ),
-    #             ),
-    #             text='',
-    #         ),
-    #     ],
-    #     [
-    #         Interval(3, 1),
-    #     ],
-    # ),
-    # (
-    #     '\\documentclass[11pt]{article}\n'
-    #     '\\begin{document}\n'
-    #     '\n'
-    #     '\\section{Introduction}\n'
-    #     '\n'
-    #     'This is a sentence.\n'
-    #     '\n'
-    #     '\\end{document}',
-    #     [
-    #         TextDocumentContentChangeEvent_Type1(
-    #             # delete 'o' from Introduction
-    #             range=Range(
-    #                 start=Position(
-    #                     line=3,
-    #                     character=13,
-    #                 ),
-    #                 end=Position(
-    #                     line=3,
-    #                     character=14,
-    #                 ),
-    #             ),
-    #             text='',
-    #         ),
-    #         TextDocumentContentChangeEvent_Type1(
-    #             # insert 'o'
-    #             range=Range(
-    #                 start=Position(
-    #                     line=3,
-    #                     character=13,
-    #                 ),
-    #                 end=Position(
-    #                     line=3,
-    #                     character=13,
-    #                 ),
-    #             ),
-    #             text='o',
-    #         ),
-    #     ],
-    #     [
-    #         Interval(3, 1),
-    #         Interval(4, 1),
-    #     ],
-    # ),
-    # (
-    #     '\\documentclass[11pt]{article}\n'
-    #     '\\begin{document}\n'
-    #     '\n'
-    #     '\\section{Introduction}\n'
-    #     '\n'
-    #     'This is a sentence.\n'
-    #     '\n'
-    #     '\\end{document}',
-    #     [
-    #         TextDocumentContentChangeEvent_Type1(
-    #             # delete last character
-    #             range=Range(
-    #                 start=Position(
-    #                     line=5,
-    #                     character=18,
-    #                 ),
-    #                 end=Position(
-    #                     line=5,
-    #                     character=19,
-    #                 ),
-    #             ),
-    #             text='',
-    #         ),
-    #         TextDocumentContentChangeEvent_Type1(
-    #             # put it back
-    #             range=Range(
-    #                 start=Position(
-    #                     line=5,
-    #                     character=18,
-    #                 ),
-    #                 end=Position(
-    #                     line=5,
-    #                     character=18,
-    #                 ),
-    #             ),
-    #             text='.',
-    #         ),
-    #     ],
-    #     [
-    #         Interval(31, 1),
-    #         Interval(32, 1),
-    #     ],
-    # ),
-    # (
-    #     '\\documentclass[11pt]{article}\n'
-    #     '\\begin{document}\n'
-    #     '\n'
-    #     '\\section{Introduction}\n'
-    #     '\n'
-    #     'This is a sentence.\n'
-    #     '\n'
-    #     '\\end{document}',
-    #     [
-    #         TextDocumentContentChangeEvent_Type1(
-    #             # add character at the end
-    #             range=Range(
-    #                 start=Position(
-    #                     line=5,
-    #                     character=19,
-    #                 ),
-    #                 end=Position(
-    #                     line=5,
-    #                     character=19,
-    #                 ),
-    #             ),
-    #             text='c',
-    #         ),
-    #     ],
-    #     [
-    #         Interval(33, 1),
-    #     ],
-    # ),
-    # (
-    #     '\\documentclass[11pt]{article}\n'
-    #     '\\begin{document}\n'
-    #     '\n'
-    #     '\\section{Introduction}\n'
-    #     '\n'
-    #     'This is a sentence.\n'
-    #     '\n'
-    #     '\\end{document}',
-    #     [
-    #         TextDocumentContentChangeEvent_Type1(
-    #             # add character at the end
-    #             range=Range(
-    #                 start=Position(
-    #                     line=5,
-    #                     character=19,
-    #                 ),
-    #                 end=Position(
-    #                     line=5,
-    #                     character=19,
-    #                 ),
-    #             ),
-    #             text='a',
-    #         ),
-    #         TextDocumentContentChangeEvent_Type1(
-    #             # add character at the end
-    #             range=Range(
-    #                 start=Position(
-    #                     line=5,
-    #                     character=20,
-    #                 ),
-    #                 end=Position(
-    #                     line=5,
-    #                     character=20,
-    #                 ),
-    #             ),
-    #             text='s',
-    #         ),
-    #         TextDocumentContentChangeEvent_Type1(
-    #             # add character at the end
-    #             range=Range(
-    #                 start=Position(
-    #                     line=5,
-    #                     character=21,
-    #                 ),
-    #                 end=Position(
-    #                     line=5,
-    #                     character=21,
-    #                 ),
-    #             ),
-    #             text='d',
-    #         ),
-    #     ],
-    #     [
-    #         Interval(33, 1),
-    #         Interval(34, 1),
-    #         Interval(35, 1),
-    #     ],
-    # ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n'
+        '\\end{document}',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                # delete 'o' from Introduction
+                range=Range(
+                    start=Position(
+                        line=3,
+                        character=13,
+                    ),
+                    end=Position(
+                        line=3,
+                        character=14,
+                    ),
+                ),
+                text='',
+            ),
+        ],
+        [
+            Interval(3, 1),
+        ],
+    ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n'
+        '\\end{document}',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                # delete 'o' from Introduction
+                range=Range(
+                    start=Position(
+                        line=3,
+                        character=13,
+                    ),
+                    end=Position(
+                        line=3,
+                        character=14,
+                    ),
+                ),
+                text='',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                # insert 'o'
+                range=Range(
+                    start=Position(
+                        line=3,
+                        character=13,
+                    ),
+                    end=Position(
+                        line=3,
+                        character=13,
+                    ),
+                ),
+                text='o',
+            ),
+        ],
+        [
+            Interval(3, 1),
+            Interval(4, 1),
+        ],
+    ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n'
+        '\\end{document}',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                # delete last character
+                range=Range(
+                    start=Position(
+                        line=5,
+                        character=18,
+                    ),
+                    end=Position(
+                        line=5,
+                        character=19,
+                    ),
+                ),
+                text='',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                # put it back
+                range=Range(
+                    start=Position(
+                        line=5,
+                        character=18,
+                    ),
+                    end=Position(
+                        line=5,
+                        character=18,
+                    ),
+                ),
+                text='.',
+            ),
+        ],
+        [
+            Interval(31, 1),
+            Interval(32, 1),
+        ],
+    ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n'
+        '\\end{document}',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                # add character at the end
+                range=Range(
+                    start=Position(
+                        line=5,
+                        character=19,
+                    ),
+                    end=Position(
+                        line=5,
+                        character=19,
+                    ),
+                ),
+                text='c',
+            ),
+        ],
+        [
+            Interval(33, 1),
+        ],
+    ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n'
+        '\\end{document}',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                # add character at the end
+                range=Range(
+                    start=Position(
+                        line=5,
+                        character=19,
+                    ),
+                    end=Position(
+                        line=5,
+                        character=19,
+                    ),
+                ),
+                text='a',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                # add character at the end
+                range=Range(
+                    start=Position(
+                        line=5,
+                        character=20,
+                    ),
+                    end=Position(
+                        line=5,
+                        character=20,
+                    ),
+                ),
+                text='s',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                # add character at the end
+                range=Range(
+                    start=Position(
+                        line=5,
+                        character=21,
+                    ),
+                    end=Position(
+                        line=5,
+                        character=21,
+                    ),
+                ),
+                text='d',
+            ),
+        ],
+        [
+            Interval(33, 1),
+            Interval(34, 1),
+            Interval(35, 1),
+        ],
+    ),
     (
         '\\documentclass[11pt]{article}\n'
         '\\begin{document}\n'

@@ -9,7 +9,8 @@ _This tool is in early development._
 
 ## LSP features
 
-* Diagnostics: spelling or grammatical errors
+* Diagnostics:
+    * spelling or grammatical errors
 * Code actions:
     * Fix suggestions
     * Analyze paragraph with a selected passive analyzer (if the analyzer does not check on save or change)
@@ -20,8 +21,8 @@ _This tool is in early development._
         <details><summary>Showcase</summary>
            <img src="https://user-images.githubusercontent.com/414596/219856461-406c1e8f-ef71-4b6d-9270-6955320bd6aa.gif" height=80% width=80%/>
         </details>
-
     * Custom actions defined by a given analyzer (e.g. prompt OpenAI)
+* Context based word suggestion
 
 ## Analyzers
 
@@ -35,6 +36,7 @@ The following tools run on the local system:
 
       ```pip install git+https://github.com/PrithivirajDamodaran/Gramformer.git```
 * hf_checker: Huggingface `text2text-generation` pipline based analyser. See the [flan-t5-large-grammar-synthesis](https://huggingface.co/pszemraj/flan-t5-large-grammar-synthesis) model for an example.
+* [hf_completion](https://huggingface.co/docs/transformers/task_summary#language-modeling): Huggingface `fill-mask` pipline based text completion.
 
 ### Tools using remote services
 
@@ -103,7 +105,7 @@ textLSP = {
         },
         gramformer = {
             -- gramformer dependency needs to be installed manually
-            enabled = true,
+            enabled = false,
             gpu = false,
             check_text = {
                 on_open = false,
@@ -123,8 +125,14 @@ textLSP = {
                 on_change = false,
             }
         },
-        openai = {
+        hf_completion = {
             enabled = true,
+            gpu = false,
+            model='bert-base-multilingual-cased',
+            topk=5,
+        },
+        openai = {
+            enabled = false,
             api_key = '<MY_API_KEY>',
             check_text = {
                 on_open = false,
