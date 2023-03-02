@@ -20,7 +20,7 @@ from lsprotocol.types import (
 from pygls.server import LanguageServer
 
 from ..analyser import Analyser
-from ...types import Interval, ConfigurationError, TokenDiff
+from ...types import Interval, ConfigurationError, TokenDiff, ProgressBar
 from ...documents.document import BaseDocument
 
 
@@ -198,34 +198,39 @@ class OpenAIAnalyser(Analyser):
             position: str,
             new_line=True
     ):
-        doc = self.get_document(uri)
+        with ProgressBar(
+                self.language_server,
+                f'{self.name} generating',
+                token=self._progressbar_token
+        ):
+            doc = self.get_document(uri)
 
-        new_text = self._generate(prompt)
-        new_text += '\n'
-        position = Position(**eval(position))
-        range = Range(
-            start=position,
-            end=position,
-        )
+            new_text = self._generate(prompt)
+            new_text += '\n'
+            position = Position(**eval(position))
+            range = Range(
+                start=position,
+                end=position,
+            )
 
-        edit = WorkspaceEdit(
-            document_changes=[
-                TextDocumentEdit(
-                    text_document=VersionedTextDocumentIdentifier(
-                        uri=doc.uri,
-                        version=doc.version,
-                    ),
-                    edits=[
-                        TextEdit(
-                            range=range,
-                            new_text=new_text,
+            edit = WorkspaceEdit(
+                document_changes=[
+                    TextDocumentEdit(
+                        text_document=VersionedTextDocumentIdentifier(
+                            uri=doc.uri,
+                            version=doc.version,
                         ),
+                        edits=[
+                            TextEdit(
+                                range=range,
+                                new_text=new_text,
+                            ),
 
-                    ]
-                )
-            ]
-        )
-        self.language_server.apply_edit(edit, 'textlsp.openai.generate')
+                        ]
+                    )
+                ]
+            )
+            self.language_server.apply_edit(edit, 'textlsp.openai.generate')
 
     def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
         doc = self.get_document(params)

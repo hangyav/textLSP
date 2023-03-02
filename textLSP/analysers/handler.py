@@ -19,7 +19,7 @@ from pygls.workspace import Document
 from .. import analysers
 from .analyser import Analyser, AnalysisError
 from ..utils import get_class
-from ..types import ConfigurationError
+from ..types import ConfigurationError, ProgressBar
 
 
 logger = logging.getLogger(__name__)
@@ -47,15 +47,16 @@ class AnalyserHandler():
                 self.analysers[name] = analyser
             else:
                 try:
-                    cls = get_class(
-                        '{}.{}'.format(analysers.__name__, name),
-                        Analyser,
-                    )
-                    self.analysers[name] = cls(
-                        self.language_server,
-                        config,
-                        name
-                    )
+                    with ProgressBar(self.language_server, f'{name} init'):
+                        cls = get_class(
+                            '{}.{}'.format(analysers.__name__, name),
+                            Analyser,
+                        )
+                        self.analysers[name] = cls(
+                            self.language_server,
+                            config,
+                            name
+                        )
                 except ImportError as e:
                     self.language_server.show_message(
                         str(e),

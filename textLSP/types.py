@@ -255,19 +255,27 @@ class TokenDiff():
 
 
 class ProgressBar():
-    def __init__(self, ls, message=None, percentage=0):
-        self.token = str(uuid.uuid4())
+    def __init__(self, ls, title='', percentage=0, token=None):
         self.ls = ls
-        self.ls.progress.create(self.token)
-        if message is not None:
-            self.begin(message, percentage)
+        self.title = title
+        self.percentage = percentage
+        self.token = token
+        if self.token is None:
+            self.token = self.create_token()
 
-    def begin(self, title, percentage=0):
+    def begin(self, title=None, percentage=None):
+        if title is not None:
+            self.title = title
+        if percentage is not None:
+            self.percentage = percentage
+
+        if self.token not in self.ls.progress.tokens:
+            self.ls.progress.create(self.token)
         self.ls.progress.begin(
             self.token,
             WorkDoneProgressBegin(
-                title=title,
-                percentage=percentage,
+                title=self.title,
+                percentage=self.percentage,
             )
         )
 
@@ -285,3 +293,14 @@ class ProgressBar():
             self.token,
             WorkDoneProgressEnd(message=message)
         )
+
+    def __enter__(self):
+        self.begin()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.end('Done')
+
+    @staticmethod
+    def create_token():
+        return str(uuid.uuid4())

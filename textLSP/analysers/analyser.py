@@ -54,6 +54,7 @@ class Analyser():
         self._code_actions_dict = dict()
         self._content_change_dict = dict()
         self._checked_documents = set()
+        self._progressbar_token = ProgressBar.create_token()
 
     def _did_open(self, doc: Document):
         raise NotImplementedError()
@@ -63,10 +64,13 @@ class Analyser():
         self.init_document_items(doc)
         self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
         if self.should_run_on(Analyser.CONFIGURATION_CHECK_ON_OPEN):
-            progress = ProgressBar(self.language_server, f'{self.name} checking...')
-            self._did_open(doc)
-            self._checked_documents.add(doc.uri)
-            progress.end('Finished!')
+            with ProgressBar(
+                    self.language_server,
+                    f'{self.name} checking',
+                    token=self._progressbar_token
+            ):
+                self._did_open(doc)
+                self._checked_documents.add(doc.uri)
 
     def _did_change(self, doc: Document, changes: List[Interval]):
         raise NotImplementedError()
@@ -178,9 +182,12 @@ class Analyser():
                 )
             else:
                 changes = self._content_change_dict[doc.uri].get_changes()
-                progress = ProgressBar(self.language_server, f'{self.name} checking...')
-                self._did_change(doc, changes)
-                progress.end('Finished!')
+                with ProgressBar(
+                        self.language_server,
+                        f'{self.name} checking',
+                        token=self._progressbar_token
+                ):
+                    self._did_change(doc, changes)
                 self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
         elif len(line_shifts) > 0:
             self.language_server.publish_stored_diagnostics(doc)
@@ -199,9 +206,12 @@ class Analyser():
                     )
                 else:
                     changes = self._content_change_dict[doc.uri].get_changes()
-                    progress = ProgressBar(self.language_server, f'{self.name} checking...')
-                    self._did_change(doc, changes)
-                    progress.end('Finished!')
+                    with ProgressBar(
+                            self.language_server,
+                            f'{self.name} checking',
+                            token=self._progressbar_token
+                    ):
+                        self._did_change(doc, changes)
                     self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
 
     def _did_close(self, doc: Document):
@@ -397,9 +407,19 @@ class Analyser():
         if 'interval' in args:
             interval = args['interval']
             interval = Interval(interval['start'], interval['length'])
-            self._command_analyse(doc, interval)
+            with ProgressBar(
+                    self.language_server,
+                    f'{self.name} checking',
+                    token=self._progressbar_token
+            ):
+                self._command_analyse(doc, interval)
         else:
-            self._command_analyse(doc)
+            with ProgressBar(
+                    self.language_server,
+                    f'{self.name} checking',
+                    token=self._progressbar_token
+            ):
+                self._command_analyse(doc)
             self._checked_documents.add(args['uri'])
 
     def get_completions(self, params: Optional[CompletionParams] = None) -> Optional[CompletionList]:

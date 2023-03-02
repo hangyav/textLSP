@@ -75,7 +75,6 @@ class HFCompletionAnalyser(Analyser):
                 input += paragraph[in_paragraph_offset+1:].strip()
 
             res = list()
-            logger.warning(input)
             for item in self.completor(
                 input,
                 top_k=self.config.get(self.CONFIGURATION_TOP_K, self.SETTINGS_DEFAULT_TOP_K),
