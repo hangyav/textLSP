@@ -98,9 +98,16 @@ class GramformerAnalyser(Analyser):
                         character=range.end.character+1,
                     )
                 )
+                if len(token) > 0 and len(edit[4]) > 0:
+                    message = f'"{token}": use "{edit[4]}" instead'
+                elif len(token) > 0:
+                    message = f'"{token}": remove'
+                else:
+                    message = f'insert "{edit[4]}"'
+
                 diagnostic = Diagnostic(
                     range=range,
-                    message=f'"{token}": Gramformer suggestion',
+                    message=message,
                     source='gramformer',
                     severity=self.get_severity(),
                     code=f'gramformer:{edit[0]}',

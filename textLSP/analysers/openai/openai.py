@@ -103,11 +103,19 @@ class OpenAIAnalyser(Analyser):
                 )
             )
 
+            if edit.type == TokenDiff.INSERT:
+                message = f'insert "{edit.new_token}"'
+            elif edit.type == TokenDiff.REPLACE:
+                message = f'"{token}": use "{edit.new_token}" instead'
+            else:
+                message = f'"{token}": remove'
+
             diagnostic = Diagnostic(
                 range=range,
-                message=f'"{token}": openai {edit.type}',
+                message=message,
                 source='openai',
                 severity=self.get_severity(),
+                code=f'openai:{edit.type}',
             )
             action = self.build_single_suggestion_action(
                 doc=doc,

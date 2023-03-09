@@ -112,6 +112,7 @@ class HFCheckerAnalyser(Analyser):
                 message=message,
                 source='hf_checker',
                 severity=self.get_severity(),
+                code=f'hf_checker:{edit.type}',
             )
             action = self.build_single_suggestion_action(
                 doc=doc,
