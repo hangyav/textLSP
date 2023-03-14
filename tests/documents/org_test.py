@@ -12,8 +12,11 @@ from textLSP.documents.org import OrgDocument
         '    - Level 2 list 2',
         #
         'Task 1\n'
+        '\n'
         'Level 1 list:\n'
+        '\n'
         'Level 2 list 1\n'
+        '\n'
         'Level 2 list 2\n'
     ),
     (
@@ -23,9 +26,11 @@ from textLSP.documents.org import OrgDocument
         '  This is a paragraph.\n',
         #
         'Task 1\n'
+        '\n'
         'This is a paragraph.\n'
         '\n'
         'Task 2\n'
+        '\n'
         'This is a paragraph.\n'
     ),
     (
@@ -34,6 +39,7 @@ from textLSP.documents.org import OrgDocument
         '  This is another sentence in it.',
         #
         'Task 1\n'
+        '\n'
         'This is a paragraph. This is another sentence in it.\n'
     ),
     (
@@ -43,6 +49,7 @@ from textLSP.documents.org import OrgDocument
         '  This is another paragraph.',
         #
         'Task 1\n'
+        '\n'
         'This is a paragraph.\n'
         '\n'
         'This is another paragraph.\n'
@@ -52,6 +59,7 @@ from textLSP.documents.org import OrgDocument
         '  * DONE This is a list.',
         #
         'Task DONE 1\n'
+        '\n'
         'DONE This is a list.\n'
     ),
 ])

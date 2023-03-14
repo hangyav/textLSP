@@ -29,9 +29,12 @@ class OrgDocument(TreeSitterDocument):
     }
 
     NEWLINE_AFTER_ONE = {
-        PARAGRAPH,
+        # SECTION,
+    }
+
+    NEWLINE_AFTER_TWO = {
         HEADLINE,
-        SECTION,
+        PARAGRAPH,
     }
 
     def __init__(self, *args, **kwargs):
@@ -61,6 +64,9 @@ class OrgDocument(TreeSitterDocument):
         for root in self.NEWLINE_AFTER_ONE:
             query_str += f'({root}) @{self.NODE_NEWLINE_AFTER_ONE}\n'
 
+        for root in self.NEWLINE_AFTER_TWO:
+            query_str += f'({root}) @{self.NODE_NEWLINE_AFTER_TWO}\n'
+
         return self._language.query(query_str)
 
     def _iterate_text_nodes(self, tree: Tree) -> Generator[TextNode, None, None]:
@@ -83,14 +89,14 @@ class OrgDocument(TreeSitterDocument):
 
             if node[1] == self.NODE_CONTENT:
                 # check if we need newlines due to linebreaks in source
-                if (
-                    last_sent is not None
-                    and node[0].start_point[0] - last_sent.end_point[0] > 1
-                    and '' in lines[last_sent.end_point[0]+1:node[0].start_point[0]]
-                ):
-                    for nl_node in TextNode.get_new_lines(1, last_sent.end_point):
-                        yield nl_node
-                        last_sent = nl_node
+                # if (
+                #     last_sent is not None
+                #     and node[0].start_point[0] - last_sent.end_point[0] > 1
+                #     and '' in lines[last_sent.end_point[0]+1:node[0].start_point[0]]
+                # ):
+                #     for nl_node in TextNode.get_new_lines(1, last_sent.end_point):
+                #         yield nl_node
+                #         last_sent = nl_node
 
                 # handle spaces
                 if self._needs_space_before(node[0], lines, last_sent):
@@ -117,6 +123,8 @@ class OrgDocument(TreeSitterDocument):
                     yield last_sent
             elif node[1] == self.NODE_NEWLINE_AFTER_ONE:
                 self._insert_point_in_order(node[0].end_point, new_lines_after)
+            elif node[1] == self.NODE_NEWLINE_AFTER_TWO:
+                self._insert_point_in_order(node[0].end_point, new_lines_after, 2)
 
         yield from TextNode.get_new_lines(
             1,
