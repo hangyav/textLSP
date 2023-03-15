@@ -26,7 +26,10 @@ logger = logging.getLogger(__name__)
 class BaseDocument(Document):
     def __init__(self, *args, config: Dict = None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.config = config
+        if config is None:
+            self.config = dict()
+        else:
+            self.config = config
 
     @property
     def cleaned_source(self) -> str:
@@ -59,7 +62,7 @@ class BaseDocument(Document):
         )
 
     def range_at_offset(self, offset: int, length: int, cleaned=False) -> Range:
-        start = self.position_at_offset(offset)
+        start = self.position_at_offset(offset, cleaned)
         if start is None:
             return None
 
@@ -241,6 +244,18 @@ class CleanableDocument(BaseDocument):
     def apply_change(self, change: TextDocumentContentChangeEvent) -> None:
         super().apply_change(change)
         self._cleaned_source = None
+
+    def position_at_offset(self, offset: int, cleaned=False) -> Position:
+        if not cleaned:
+            return super().position_at_offset(offset, cleaned)
+
+        raise NotImplementedError()
+
+    def range_at_offset(self, offset: int, length: int, cleaned=False) -> Range:
+        if not cleaned:
+            return super().range_at_offset(offset, length, cleaned)
+
+        raise NotImplementedError()
 
     def offset_at_position(self, position: Position, cleaned=False) -> int:
         if not cleaned:

@@ -166,6 +166,9 @@ textLSP = {
                 'DONE'
             },
         },
+        txt = {
+            parse = true,
+        },
     },
 }
 ```
