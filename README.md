@@ -21,8 +21,14 @@ _This tool is in early development._
         <details><summary>Showcase</summary>
            <img src="https://user-images.githubusercontent.com/414596/219856461-406c1e8f-ef71-4b6d-9270-6955320bd6aa.gif" height=80% width=80%/>
         </details>
-    * Custom actions defined by a given analyzer (e.g. prompt OpenAI)
+    * Custom actions defined by a given analyzer
+      <details><summary>E.g. OpenAI text generation</summary>
+        <img src="https://user-images.githubusercontent.com/414596/219856479-b85b5c2d-6158-44be-9063-12254b76e39c.gif" height=80% width=80%/>
+      </details>
 * Context based word suggestion
+   <details><summary>Showcase</summary>
+      <img src="https://user-images.githubusercontent.com/414596/225412142-0cd83321-4a8e-47cf-8b5a-2cec4193800d.gif" height=80% width=80%/>
+   </details>
 
 ## Analyzers
 
