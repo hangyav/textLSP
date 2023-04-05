@@ -1,5 +1,6 @@
 import logging
 import openai
+from openai.error import OpenAIError
 
 from typing import List, Tuple, Optional
 from lsprotocol.types import (
@@ -16,6 +17,7 @@ from lsprotocol.types import (
         CompletionParams,
         CompletionList,
         CompletionItem,
+        MessageType,
 )
 from pygls.server import LanguageServer
 
@@ -55,26 +57,39 @@ class OpenAIAnalyser(Analyser):
         openai.api_key = self.config[self.CONFIGURATION_API_KEY]
 
     def _edit(self, text) -> List[TokenDiff]:
-        res = openai.Edit.create(
-            model=self.config.get(self.CONFIGURATION_EDIT_MODEL, self.SETTINGS_DEFAULT_EDIT_MODEL),
-            instruction=self.config.get(self.CONFIGURATION_EDIT_INSTRUCTION, self.SETTINGS_DEFAULT_EDIT_INSTRUCTION),
-            input=text,
-            temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
-        )
-        if len(res.choices) > 0:
-            return TokenDiff.token_level_diff(text, res.choices[0]['text'].strip())
+        try:
+            res = openai.Edit.create(
+                model=self.config.get(self.CONFIGURATION_EDIT_MODEL, self.SETTINGS_DEFAULT_EDIT_MODEL),
+                instruction=self.config.get(self.CONFIGURATION_EDIT_INSTRUCTION, self.SETTINGS_DEFAULT_EDIT_INSTRUCTION),
+                input=text,
+                temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
+            )
+            if len(res.choices) > 0:
+                return TokenDiff.token_level_diff(text, res.choices[0]['text'].strip())
+        except OpenAIError as e:
+            self.language_server.show_message(
+                str(e),
+                MessageType.Error,
+            )
+
         return []
 
     def _generate(self, text) -> Optional[str]:
-        res = openai.Completion.create(
-            model=self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL),
-            prompt=text,
-            temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
-            max_tokens=self.config.get(self.CONFIGURATION_MAX_TOKEN, self.SETTINGS_DEFAULT_MAX_TOKEN),
-        )
+        try:
+            res = openai.Completion.create(
+                model=self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL),
+                prompt=text,
+                temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
+                max_tokens=self.config.get(self.CONFIGURATION_MAX_TOKEN, self.SETTINGS_DEFAULT_MAX_TOKEN),
+            )
 
-        if len(res.choices) > 0:
-            return res.choices[0]['text'].strip()
+            if len(res.choices) > 0:
+                return res.choices[0]['text'].strip()
+        except OpenAIError as e:
+            self.language_server.show_message(
+                str(e),
+                MessageType.Error,
+            )
 
         return None
 
@@ -214,6 +229,9 @@ class OpenAIAnalyser(Analyser):
             doc = self.get_document(uri)
 
             new_text = self._generate(prompt)
+            if new_text is None:
+                return
+
             new_text += '\n'
             position = Position(**eval(position))
             range = Range(
