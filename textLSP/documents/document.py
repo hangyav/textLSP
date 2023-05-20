@@ -329,42 +329,42 @@ class TreeSitterDocument(CleanableDocument):
 
     def __init__(self, language_name, grammar_url, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._language = TreeSitterDocument.get_language(language_name, grammar_url)
-        self._parser = TreeSitterDocument.get_parser(
+        self._language = self.get_language(language_name, grammar_url)
+        self._parser = self.get_parser(
             language_name,
             grammar_url,
             self._language
         )
         self._text_intervals = None
 
-    @staticmethod
-    def build_library(name, url) -> None:
+    @classmethod
+    def build_library(cls, name, url) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             git_clone(url, tmpdir)
             Language.build_library(
-                TreeSitterDocument.LIB_PATH_TEMPLATE.format(name),
+                cls.LIB_PATH_TEMPLATE.format(name),
                 [tmpdir]
             )
 
-    @staticmethod
-    def get_language(name, url) -> Language:
+    @classmethod
+    def get_language(cls, name, url) -> Language:
         try:
             return Language(
-                TreeSitterDocument.LIB_PATH_TEMPLATE.format(name),
+                cls.LIB_PATH_TEMPLATE.format(name),
                 name,
             )
         except Exception:
-            TreeSitterDocument.build_library(name, url)
+            cls.build_library(name, url)
             return Language(
-                TreeSitterDocument.LIB_PATH_TEMPLATE.format(name),
+                cls.LIB_PATH_TEMPLATE.format(name),
                 name,
             )
 
-    @staticmethod
-    def get_parser(name, url, language=None) -> Parser:
+    @classmethod
+    def get_parser(cls, name, url, language=None) -> Parser:
         parser = Parser()
         if language is None:
-            language = TreeSitterDocument.get_language(name, url)
+            language = cls.get_language(name, url)
         parser.set_language(language)
         return parser
 
@@ -496,6 +496,7 @@ class DocumentTypeFactory():
     TYPE_MAP = {
         'text': 'txt',
         'tex': 'latex',
+        'md': 'mardown',
     }
 
     @staticmethod
