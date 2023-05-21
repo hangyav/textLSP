@@ -1,62 +1,66 @@
-import os
 from typing import Generator
-import tempfile
-from tree_sitter import Tree, Node, Language
+from tree_sitter import Tree
 
 from ..document import TreeSitterDocument, TextNode
-from ...utils import git_clone
 
 
 class MarkDownDocument(TreeSitterDocument):
     SUBFOLDER_MARKDOWN = 'tree-sitter-markdown'
     SUBFOLDER_MARKDOWN_INLINE = 'tree-sitter-markdown-inline'
 
-    INLINE = 'inline'
+    TEXT = 'text'
+    PARAGRAPH = 'paragraph'
+    HEADING_CONTENT = 'heading_content'
+    ATX_HEADING = 'atx_heading'
+    LINK_TEXT = 'link_text'
+    LINK_LABEL = 'link_label'
+    LINK_TITLE = 'link_title'
+    EMPHASIS = 'emphasis'
+    STRONG_EMPHASIS = 'strong_emphasis'
+    STRIKETHROUGH = 'strikethrough'
+    IMAGE_DESCRIPTION = 'image_description'
+    TABLE_CELL = 'table_cell'
 
     NODE_CONTENT = 'content'
     NODE_NEWLINE_AFTER_ONE = 'newline_after_one'
     NODE_NEWLINE_AFTER_TWO = 'newline_after_two'
 
-    TEXT_ROOTS = {
-        INLINE,
-    }
-
-    TEXT_ROOTS_WITH_ITEM = {
+    ROOTS_WITH_TEXT = {
+        PARAGRAPH,
+        HEADING_CONTENT,
+        LINK_TEXT,
+        LINK_LABEL,
+        LINK_TITLE,
+        EMPHASIS,
+        STRONG_EMPHASIS,
+        STRIKETHROUGH,
+        IMAGE_DESCRIPTION,
+        TABLE_CELL,
     }
 
     NEWLINE_AFTER_ONE = {
     }
 
     NEWLINE_AFTER_TWO = {
-        INLINE,
+        PARAGRAPH,
+        ATX_HEADING,
+        TABLE_CELL,
     }
 
     def __init__(self, *args, **kwargs):
         super().__init__(
             'markdown',
-            'https://github.com/MDeiml/tree-sitter-markdown',
+            'https://github.com/ikatyang/tree-sitter-markdown',
             *args,
             **kwargs,
         )
         self._query = self._build_query()
 
-    @staticmethod
-    def build_library(name, url) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            git_clone(url, tmpdir)
-            Language.build_library(
-                TreeSitterDocument.LIB_PATH_TEMPLATE.format(name),
-                [os.path.join(tmpdir, MarkDownDocument.SUBFOLDER_MARKDOWN)]
-            )
-
     def _build_query(self):
         query_str = ''
 
-        for root in self.TEXT_ROOTS:
-            query_str += f'({root}) @{self.NODE_CONTENT}\n'
-
-        # for root in self.TEXT_ROOTS_WITH_ITEM:
-        #     query_str += f'({root} (item ({self.EXPR}) @{self.NODE_CONTENT}))\n'
+        for root in self.ROOTS_WITH_TEXT:
+            query_str += f'({root} ({self.TEXT}) @{self.NODE_CONTENT})\n'
 
         for root in self.NEWLINE_AFTER_ONE:
             query_str += f'({root}) @{self.NODE_NEWLINE_AFTER_ONE}\n'
@@ -85,6 +89,8 @@ class MarkDownDocument(TreeSitterDocument):
                     break
 
             if node[1] == self.NODE_CONTENT:
+                if len(node[0].text.decode('utf-8').strip()) == 0:
+                    continue
                 # handle spaces
                 if self._needs_space_before(node[0], lines, last_sent):
                     sp = node[0].start_point
@@ -105,7 +111,7 @@ class MarkDownDocument(TreeSitterDocument):
                             ),
                         )
 
-                for nl in self._parse_inline(node[0]):
+                for nl in self._handle_text_nodes(node[0]):
                     last_sent = nl
                     yield nl
 
@@ -119,27 +125,21 @@ class MarkDownDocument(TreeSitterDocument):
             last_sent.end_point if last_sent else (0, 0)
         )
 
-    def _parse_inline(self, inline_node) -> Generator[TextNode, None, None]:
-        row_offset = 0
+    def _handle_text_nodes(self, inline_node) -> Generator[TextNode, None, None]:
         line_offset = 0
-        text = inline_node.text.decode('utf-8').strip().replace('\n', ' \n ')
+        text = inline_node.text.decode('utf-8').strip()
         last_sent = None
 
-        for token in text.split(' '):
-            if token == '\n':
-                line_offset = 0
-                row_offset += 1
-                continue
-
-            if last_sent is not None and last_sent.text != '\n':
+        for token in text.split():
+            if last_sent is not None:
                 yield TextNode(
                     text=' ',
                     start_point=(
-                        inline_node.start_point[0]+row_offset,
+                        inline_node.start_point[0],
                         inline_node.start_point[1]+line_offset
                     ),
                     end_point=(
-                        inline_node.start_point[0]+row_offset,
+                        inline_node.start_point[0],
                         inline_node.start_point[1]+line_offset+1
                     ),
                 )
@@ -149,11 +149,11 @@ class MarkDownDocument(TreeSitterDocument):
             node = TextNode(
                 text=token,
                 start_point=(
-                    inline_node.start_point[0]+row_offset,
+                    inline_node.start_point[0],
                     inline_node.start_point[1]+line_offset
                 ),
                 end_point=(
-                    inline_node.start_point[0]+row_offset,
+                    inline_node.start_point[0],
                     inline_node.start_point[1]+line_offset+token_len
                 ),
             )
@@ -176,5 +176,9 @@ class MarkDownDocument(TreeSitterDocument):
         if last_sent is None or last_sent.text[-1] == '\n':
             return False
         if node.start_point[0] == last_sent.end_point[0]:
-            return ' ' in lines[node.start_point[0]][last_sent.end_point[1]:node.start_point[1]]
+            text = node.text.decode('utf-8')
+            # text nodes contain whitespaces which can lead to errors
+            # E.g.: |~~This~~| is a text|
+            diff = len(text) - len(text.lstrip())
+            return ' ' in lines[node.start_point[0]][last_sent.end_point[1]:node.start_point[1]+diff]
         return last_sent.text != '\n'

@@ -361,15 +361,20 @@ class TreeSitterDocument(CleanableDocument):
             )
 
     @classmethod
-    def get_parser(cls, name, url, language=None) -> Parser:
+    def get_parser(cls, name=None, url=None, language=None) -> Parser:
         parser = Parser()
         if language is None:
+            assert name is not None
+            assert url is not None
             language = cls.get_language(name, url)
         parser.set_language(language)
         return parser
 
+    def _parse_source(self):
+        return self._parser.parse(bytes(self.source, 'utf-8'))
+
     def _clean_source(self):
-        tree = self._parser.parse(bytes(self.source, 'utf-8'))
+        tree = self._parse_source()
         self._text_intervals = OffsetPositionIntervalList()
 
         offset = 0
@@ -496,7 +501,7 @@ class DocumentTypeFactory():
     TYPE_MAP = {
         'text': 'txt',
         'tex': 'latex',
-        'md': 'mardown',
+        'md': 'markdown',
     }
 
     @staticmethod

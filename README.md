@@ -61,6 +61,7 @@ Due to potential costs turning off automatic analysis if suggested.
 
 * latex
 * org
+* markdown
 * any other file types as plain text
 
 # Setup
