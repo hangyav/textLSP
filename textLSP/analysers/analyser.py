@@ -281,12 +281,6 @@ class Analyser():
     def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
         doc = self.get_document(params)
         range = params.range
-        if range.start != range.end:
-            self.language_server.show_message(
-                'Code action is not supported for range.',
-                MessageType.Error,
-            )
-            return None
 
         # TODO make this faster?
         res = [
@@ -311,23 +305,38 @@ class Analyser():
             self.should_run_on(self.CONFIGURATION_CHECK_ON_CHANGE)
             or self.should_run_on(self.CONFIGURATION_CHECK_ON_SAVE)
         ):
-            title = f'Run {self.name} on paragraph'
-            paragraph = doc.paragraph_at_position(range.start, True)
-            res.append(
-                self.build_command_action(
-                    doc=doc,
-                    title=title,
-                    command=Command(
+            if range.start != range.end:
+                paragraphs = doc.paragraphs_at_range(range, True)
+            else:
+                paragraphs = [doc.paragraph_at_position(range.start, True)]
+
+            num_paragraphs = len(paragraphs)
+            if num_paragraphs > 0:
+                if num_paragraphs == 1:
+                    title = f'Run {self.name} on paragraph'
+                    paragraph = paragraphs[0]
+                else:
+                    title = f'Run {self.name} on the selected paragraphs'
+                    paragraph = Interval(
+                        start=paragraphs[0].start,
+                        length=paragraphs[-1].start + paragraphs[-1].length - paragraphs[0].start,
+                    )
+
+                res.append(
+                    self.build_command_action(
+                        doc=doc,
                         title=title,
-                        command=self.language_server.COMMAND_ANALYSE,
-                        arguments=[{
-                            'uri': doc.uri,
-                            'analyser': self.name,
-                            'interval': paragraph,
-                        }],
-                    ),
+                        command=Command(
+                            title=title,
+                            command=self.language_server.COMMAND_ANALYSE,
+                            arguments=[{
+                                'uri': doc.uri,
+                                'analyser': self.name,
+                                'interval': paragraph,
+                            }],
+                        ),
+                    )
                 )
-            )
 
         if range.start == Position(0, 0) and doc.uri not in self._checked_documents:
             title = f'Run {self.name} on the full document'
