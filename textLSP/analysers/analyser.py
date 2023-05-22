@@ -168,12 +168,33 @@ class Analyser():
             if action.edit.document_changes[0].edits[0].range.start <= last_position
         ]
 
+    def _update_single_code_action(self, action: CodeAction, doc: BaseDocument):
+        # update document version
+        if action.edit is not None:
+            for change in action.edit.document_changes:
+                change.text_document = VersionedTextDocumentIdentifier(
+                    uri=doc.uri,
+                    version=doc.version,
+                )
+
+    def _update_code_actions(self, doc: BaseDocument):
+        """
+        Updates the document version of code actions
+        """
+        for action in self._code_actions_dict[doc.uri]:
+            self._update_single_code_action(
+                action,
+                doc,
+            )
+
+
     def did_change(self, params: DidChangeTextDocumentParams):
         # TODO handle shifts within lines
         line_shifts = self._get_line_shifts(params)
         doc = self.get_document(params)
         self._handle_line_shifts(doc, line_shifts)
         self._remove_overflown_code_items(doc)
+        self._update_code_actions(doc)
 
         if self.should_run_on(Analyser.CONFIGURATION_CHECK_ON_CHANGE):
             if self._content_change_dict[doc.uri].full_document_change:
