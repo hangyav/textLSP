@@ -46,6 +46,7 @@ setup(
     extras_require={
         'dev': [
             'pytest',
+            'python-lsp-jsonrpc',
         ]
     },
 )
