@@ -6,6 +6,7 @@ import uuid
 
 from typing import Optional, Any, List
 from dataclasses import dataclass
+from sortedcontainers import SortedDict
 
 from lsprotocol.types import (
     Position,
@@ -15,6 +16,8 @@ from lsprotocol.types import (
     WorkDoneProgressReport,
     WorkDoneProgressEnd,
 )
+
+from .utils import position_to_tuple
 
 
 TEXT_PASSAGE_PATTERN = re.compile('[.?!] |\\n')
@@ -209,6 +212,68 @@ class OffsetPositionIntervalList():
         if idx is None:
             return None
         return self.get_interval(idx)
+
+
+class PositionDict():
+
+    def __init__(self):
+        self._positions = SortedDict()
+
+    def add(self, position: Position, item):
+        position = position_to_tuple(position)
+        self._positions[position] = item
+
+    def get(self, position: Position):
+        position = position_to_tuple(position)
+        return self._positions[position]
+
+    def update(self, old_position: Position, new_position: Position = None,
+               new_value=None):
+        assert new_position is not None or new_value is not None, 'Either'
+        ' new_position or new_value should be specified.'
+
+        old_position = position_to_tuple(old_position)
+        new_position = position_to_tuple(new_position)
+        if new_position is None:
+            self._positions[old_position] = new_value
+        return
+
+        if new_value is None:
+            new_value = self._positions.popitem(old_position)
+        else:
+            del self._positions[old_position]
+
+        self._positions[new_position] = new_value
+
+    def remove(self, position: Position):
+        position = position_to_tuple(position)
+        del self._positions[position]
+
+    def remove_from(self, position: Position, inclusive=True):
+        position = position_to_tuple(position)
+        for key in list(self._positions.irange(
+            minimum=position,
+            inclusive=(inclusive, False)
+        )):
+            del self._positions[key]
+
+    def remove_between(self, range: Range, inclusive=(True, True)):
+        minimum = position_to_tuple(range.start)
+        maximum = position_to_tuple(range.end)
+        for key in list(self._positions.irange(
+            minimum=minimum,
+            maximum=maximum,
+            inclusive=inclusive,
+        )):
+            del self._positions[key]
+
+    def irange(self, minimum: Position, maximum: Position, *args, **kwargs):
+        minimum = position_to_tuple(minimum)
+        maximum = position_to_tuple(maximum)
+        return self._positions.irange(*args, **kwargs)
+
+    def __iter__(self):
+        return iter(self._positions.values())
 
 
 @enum.unique

@@ -21,14 +21,13 @@ from lsprotocol.types import (
         TextEdit,
         Command,
         VersionedTextDocumentIdentifier,
-        MessageType,
         CompletionParams,
         CompletionList,
 )
 
 from ..documents.document import BaseDocument, ChangeTracker
 from ..utils import merge_dicts
-from ..types import Interval, TextLSPCodeActionKind, ProgressBar
+from ..types import Interval, TextLSPCodeActionKind, ProgressBar, PositionDict
 
 
 class Analyser():
@@ -76,6 +75,9 @@ class Analyser():
         raise NotImplementedError()
 
     def _get_line_shifts(self, params: DidChangeTextDocumentParams) -> List:
+        """
+        return: List of tuples (line, shift) should be sorted
+        """
         res = list()
         for change in params.content_changes:
             if type(change) == TextDocumentContentChangeEvent_Type2:
@@ -88,10 +90,13 @@ class Analyser():
 
         return res
 
-    def _handle_line_shifts(self, doc: BaseDocument, line_shifts: List):
+    def _handle_line_shifts(self, params: DidChangeTextDocumentParams):
         """
-        params: line_shifts: List of tuples (line, shift) should be sorted
+        Handlines line shifts and position shifts within lines
         """
+        should_update_diagnostics = False
+        doc = self.get_document(params)
+        line_shifts = self._get_line_shifts(params)
         if len(line_shifts) == 0:
             return
 
@@ -106,8 +111,8 @@ class Analyser():
 
         # TODO extract to function
         # diagnostics
-        diagnostics = list()
-        for diag in self._diagnostics_dict[doc.uri]:
+        # diagnostics = list()
+        for diag in list(self._diagnostics_dict[doc.uri]):
             range = diag.range
             idx = bisect.bisect_left(bisect_lst, range.start.line)
             idx = min(idx, num_shifts-1)
@@ -126,8 +131,14 @@ class Analyser():
                         character=range.end.character
                     )
                 )
-            diagnostics.append(diag)
-        self._diagnostics_dict[doc.uri] = diagnostics
+                self._diagnostics_dict[doc.uri].update(
+                    range.start,
+                    diag.range.start,
+                    diag
+                )
+                should_update_diagnostics = True
+            # diagnostics.append(diag)
+        # self._diagnostics_dict[doc.uri] = diagnostics
 
         # code actions
         code_actions = list()
@@ -153,14 +164,12 @@ class Analyser():
             code_actions.append(action)
         self._code_actions_dict[doc.uri] = code_actions
 
+        return should_update_diagnostics
+
     def _remove_overflown_code_items(self, doc: BaseDocument):
         last_position = doc.last_position(True)
 
-        self._diagnostics_dict[doc.uri] = [
-            diag
-            for diag in self._diagnostics_dict[doc.uri]
-            if diag.range.start <= last_position
-        ]
+        self._diagnostics_dict[doc.uri].remove_from(last_position, False)
 
         self._code_actions_dict[doc.uri] = [
             action
@@ -189,9 +198,8 @@ class Analyser():
 
     def did_change(self, params: DidChangeTextDocumentParams):
         # TODO handle shifts within lines
-        line_shifts = self._get_line_shifts(params)
         doc = self.get_document(params)
-        self._handle_line_shifts(doc, line_shifts)
+        should_update_diagnostics = self._handle_line_shifts(params)
         self._remove_overflown_code_items(doc)
         self._update_code_actions(doc)
 
@@ -209,7 +217,7 @@ class Analyser():
                 ):
                     self._did_change(doc, changes)
                 self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
-        elif len(line_shifts) > 0:
+        elif should_update_diagnostics:
             self.language_server.publish_stored_diagnostics(doc)
 
     def update_document(self, doc: Document, change: TextDocumentContentChangeEvent):
@@ -272,21 +280,19 @@ class Analyser():
         )
 
     def init_diagnostics(self, doc: Document):
-        self._diagnostics_dict[doc.uri] = list()
+        self._diagnostics_dict[doc.uri] = PositionDict()
 
     def get_diagnostics(self, doc: Document):
-        return self._diagnostics_dict.get(doc.uri, list())
+        return self._diagnostics_dict.get(doc.uri, PositionDict())
 
     def add_diagnostics(self, doc: Document, diagnostics: List[Diagnostic]):
-        self._diagnostics_dict[doc.uri] += diagnostics
+        for diag in diagnostics:
+            self._diagnostics_dict[doc.uri].add(diag.range.start, diag)
         self.language_server.publish_stored_diagnostics(doc)
 
     def remove_code_items_at_rage(self, doc: Document, pos_range: Range):
-        diagnostics = list()
-        for diag in self.get_diagnostics(doc):
-            if diag.range.end < pos_range.start or diag.range.start > pos_range.end:
-                diagnostics.append(diag)
-        self._diagnostics_dict[doc.uri] = diagnostics
+        # FIXME: some items are disappearin on save
+        self._diagnostics_dict[doc.uri].remove_between(pos_range)
 
         code_actions = list()
         for action in self._code_actions_dict[doc.uri]:

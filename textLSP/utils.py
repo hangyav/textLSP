@@ -8,6 +8,7 @@ from functools import wraps
 from threading import RLock
 from git import Repo
 from appdirs import user_cache_dir
+from lsprotocol.types import Position
 
 
 def merge_dicts(dict1, dict2):
@@ -99,3 +100,7 @@ def batch_text(text: str, pattern: re.Pattern, max_size: int, min_size: int = 0)
 
     if sidx <= text_len:
         yield text[sidx:text_len]
+
+
+def position_to_tuple(position: Position):
+    return (position.line, position.character)
