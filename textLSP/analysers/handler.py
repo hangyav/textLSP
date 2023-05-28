@@ -72,6 +72,10 @@ class AnalyserHandler():
             if name not in self.analysers:
                 analyser.close()
 
+    def shutdown(self):
+        for analyser in self.analysers.values():
+            analyser.close()
+
     def get_diagnostics(self, doc: Document):
         return [analyser.get_diagnostics(doc) for analyser in self.analysers.values()]
 

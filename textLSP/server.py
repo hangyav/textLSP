@@ -13,6 +13,7 @@ from lsprotocol.types import (
     WORKSPACE_DID_CHANGE_CONFIGURATION,
     INITIALIZE,
     TEXT_DOCUMENT_COMPLETION,
+    SHUTDOWN,
 )
 from lsprotocol.types import (
     DidOpenTextDocumentParams,
@@ -29,6 +30,7 @@ from lsprotocol.types import (
     CompletionList,
     CompletionOptions,
     CompletionParams,
+    ShutdownRequest,
 )
 from .workspace import TextLSPWorkspace
 from .utils import merge_dicts, get_textlsp_version
@@ -120,6 +122,11 @@ class TextLSPLanguageServer(LanguageServer):
             diagnostics.extend(lst)
         self.publish_diagnostics(doc.uri, diagnostics)
 
+    def shutdown(self):
+        logger.warning('TextLSP shutting down!')
+        self.analyser_handler.shutdown()
+        super().shutdown()
+
 
 SERVER = TextLSPLanguageServer(
     name='textLSP',
@@ -146,6 +153,11 @@ async def did_save(ls: TextLSPLanguageServer, params: DidSaveTextDocumentParams)
 @SERVER.feature(TEXT_DOCUMENT_DID_CLOSE)
 async def did_close(ls: TextLSPLanguageServer, params: DidCloseTextDocumentParams):
     await ls.analyser_handler.did_close(params)
+
+
+@SERVER.feature(SHUTDOWN)
+def shutdown(ls: TextLSPLanguageServer, params: ShutdownRequest):
+    ls.shutdown()
 
 
 @SERVER.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)

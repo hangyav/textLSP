@@ -171,6 +171,9 @@ class LanguageToolAnalyser(Analyser):
             tool.close()
         self.tool = dict()
 
+    def __del__(self):
+        self.close()
+
     def _get_mapped_language(self, language):
         return LANGUAGE_MAP[language]
 
