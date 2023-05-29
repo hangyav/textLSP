@@ -278,7 +278,7 @@ class PositionDict():
         if maximum is not None:
             maximum = position_to_tuple(maximum)
 
-        return self._positions.irange(*args, **kwargs)
+        return self._positions.irange(minimum, maximum, *args, **kwargs)
 
     def irange_values(self, *args, **kwargs):
         for key in self.irange(*args, **kwargs):

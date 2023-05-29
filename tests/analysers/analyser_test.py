@@ -23,7 +23,7 @@ from tests.lsp_test_client import session, utils
     (
         'This is a sentence.\n'
         'This is a sAntence with an error.\n'
-        'This is another sentence.',
+        'And another sentence.',
         (
             Range(
                 start=Position(line=2, character=0),
@@ -40,7 +40,7 @@ from tests.lsp_test_client import session, utils
     (
         'This is a sentence.\n'
         'This is a sAntence with an error.\n'
-        'This is another sentence.',
+        'And another sentence.',
         (
             Range(
                 start=Position(line=0, character=0),
@@ -54,27 +54,44 @@ from tests.lsp_test_client import session, utils
             end=Position(line=4, character=18),
         ),
     ),
-    # (
-    #     'This is a sentence.\n'
-    #     'This is a sAntence with an error.\n'
-    #     'This is another sentence.',
-    #     (
-    #         Range(
-    #             start=Position(line=1, character=23),
-    #             end=Position(line=1, character=23),
-    #         ),
-    #         '\n',
-    #         False
-    #     ),
-    #     Range(
-    #         start=Position(line=1, character=10),
-    #         end=Position(line=1, character=18),
-    #     ),
-    # ),
     (
         'This is a sentence.\n'
         'This is a sAntence with an error.\n'
-        'This is another sentence.',
+        'And another sentence.',
+        (
+            Range(
+                start=Position(line=0, character=0),
+                end=Position(line=1, character=0),
+            ),
+            '',
+            True
+        ),
+        Range(
+            start=Position(line=0, character=10),
+            end=Position(line=0, character=18),
+        ),
+    ),
+    (
+        'This is a sentence.\n'
+        'This is a sAntence with an error.\n'
+        'And another sentence.',
+        (
+            Range(
+                start=Position(line=1, character=23),
+                end=Position(line=1, character=23),
+            ),
+            '\n',
+            False
+        ),
+        Range(
+            start=Position(line=1, character=10),
+            end=Position(line=1, character=18),
+        ),
+    ),
+    (
+        'This is a sentence.\n'
+        'This is a sAntence with an error.\n'
+        'And another sentence.',
         (
             Range(
                 start=Position(line=1, character=33),
@@ -88,23 +105,40 @@ from tests.lsp_test_client import session, utils
             end=Position(line=1, character=18),
         ),
     ),
-    # (
-    #     'This is a sentence.\n'
-    #     'This is a sAntence with an error.\n'
-    #     'This is another sentence.',
-    #     (
-    #         Range(
-    #             start=Position(line=1, character=4),
-    #             end=Position(line=1, character=4),
-    #         ),
-    #         ' word',
-    #         False
-    #     ),
-    #     Range(
-    #         start=Position(line=1, character=15),
-    #         end=Position(line=1, character=23),
-    #     ),
-    # ),
+    (
+        'This is a sentence.\n'
+        'This is a sAntence with an error.\n'
+        'And another sentence.',
+        (
+            Range(
+                start=Position(line=1, character=4),
+                end=Position(line=1, character=4),
+            ),
+            ' word',
+            True
+        ),
+        Range(
+            start=Position(line=1, character=15),
+            end=Position(line=1, character=23),
+        ),
+    ),
+    (
+        'This is a sentence.\n'
+        'This is a sAntence with an error.\n'
+        'And another sentence.',
+        (
+            Range(
+                start=Position(line=1, character=4),
+                end=Position(line=1, character=4),
+            ),
+            '\n',
+            True
+        ),
+        Range(
+            start=Position(line=2, character=5),
+            end=Position(line=2, character=13),
+        ),
+    ),
 ])
 def test_line_shifts(text, edit, exp, json_converter, langtool_ls_onsave):
     done = Event()
