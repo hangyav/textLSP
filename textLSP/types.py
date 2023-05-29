@@ -236,7 +236,7 @@ class PositionDict():
         new_position = position_to_tuple(new_position)
         if new_position is None:
             self._positions[old_position] = new_value
-        return
+            return
 
         if new_value is None:
             new_value = self._positions.popitem(old_position)
