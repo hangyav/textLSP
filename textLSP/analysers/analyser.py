@@ -27,7 +27,12 @@ from lsprotocol.types import (
 
 from ..documents.document import BaseDocument, ChangeTracker
 from ..utils import merge_dicts
-from ..types import Interval, TextLSPCodeActionKind, ProgressBar, PositionDict
+from ..types import (
+    Interval,
+    TextLSPCodeActionKind,
+    ProgressBar,
+    PositionDict,
+)
 
 
 class Analyser():
@@ -94,6 +99,7 @@ class Analyser():
         """
         Handlines line shifts and position shifts within lines
         """
+        # TODO handle shifts within lines
         should_update_diagnostics = False
         doc = self.get_document(params)
         line_shifts = self._get_line_shifts(params)
@@ -110,8 +116,6 @@ class Analyser():
         num_shifts = len(accumulative_shifts)
 
         # TODO extract to function
-        # diagnostics
-        # diagnostics = list()
         for diag in list(self._diagnostics_dict[doc.uri]):
             range = diag.range
             idx = bisect.bisect_left(bisect_lst, range.start.line)
@@ -137,12 +141,9 @@ class Analyser():
                     diag
                 )
                 should_update_diagnostics = True
-            # diagnostics.append(diag)
-        # self._diagnostics_dict[doc.uri] = diagnostics
 
         # code actions
-        code_actions = list()
-        for action in self._code_actions_dict[doc.uri]:
+        for action in list(self._code_actions_dict[doc.uri]):
             range = action.edit.document_changes[0].edits[0].range
             idx = bisect.bisect_left(bisect_lst, range.start.line)
             idx = min(idx, num_shifts-1)
@@ -161,8 +162,11 @@ class Analyser():
                         character=range.end.character
                     )
                 )
-            code_actions.append(action)
-        self._code_actions_dict[doc.uri] = code_actions
+                self._code_actions_dict[doc.uri].update(
+                    range.start,
+                    action.edit.document_changes[0].edits[0].range.start,
+                    action
+                )
 
         return should_update_diagnostics
 
@@ -170,12 +174,7 @@ class Analyser():
         last_position = doc.last_position(True)
 
         self._diagnostics_dict[doc.uri].remove_from(last_position, False)
-
-        self._code_actions_dict[doc.uri] = [
-            action
-            for action in self._code_actions_dict[doc.uri]
-            if action.edit.document_changes[0].edits[0].range.start <= last_position
-        ]
+        self._code_actions_dict[doc.uri].remove_from(last_position, False)
 
     def _update_single_code_action(self, action: CodeAction, doc: BaseDocument):
         # update document version
@@ -197,7 +196,6 @@ class Analyser():
             )
 
     def did_change(self, params: DidChangeTextDocumentParams):
-        # TODO handle shifts within lines
         doc = self.get_document(params)
         should_update_diagnostics = self._handle_line_shifts(params)
         self._remove_overflown_code_items(doc)
@@ -291,18 +289,11 @@ class Analyser():
         self.language_server.publish_stored_diagnostics(doc)
 
     def remove_code_items_at_rage(self, doc: Document, pos_range: Range):
-        # FIXME: some items are disappearin on save
         self._diagnostics_dict[doc.uri].remove_between(pos_range)
-
-        code_actions = list()
-        for action in self._code_actions_dict[doc.uri]:
-            range = action.edit.document_changes[0].edits[0].range
-            if range.end < pos_range.start or range.start > pos_range.end:
-                code_actions.append(action)
-        self._code_actions_dict[doc.uri] = code_actions
+        self._code_actions_dict[doc.uri].remove_between(pos_range)
 
     def init_code_actions(self, doc: Document):
-        self._code_actions_dict[doc.uri] = list()
+        self._code_actions_dict[doc.uri] = PositionDict()
 
     def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
         doc = self.get_document(params)
@@ -311,11 +302,12 @@ class Analyser():
         # TODO make this faster?
         res = [
             action
-            for action in self._code_actions_dict[doc.uri]
+            for action in self._code_actions_dict[doc.uri].irange_values(maximum=range.start)
             if (
                 (
-                    action.edit.document_changes[0].edits[0].range.start <= range.start
-                    and action.edit.document_changes[0].edits[0].range.end >= range.end
+                    # action.edit.document_changes[0].edits[0].range.start <= range.start
+                    # and
+                    action.edit.document_changes[0].edits[0].range.end >= range.end
                 )
                 # if it's not reachable by the cursor
                 or (
@@ -384,7 +376,11 @@ class Analyser():
         return res
 
     def add_code_actions(self, doc: Document, actions: List[CodeAction]):
-        self._code_actions_dict[doc.uri] += actions
+        for action in actions:
+            self._code_actions_dict[doc.uri].add(
+                action.edit.document_changes[0].edits[0].range.start,
+                action,
+            )
 
     @staticmethod
     def build_single_suggestion_action(

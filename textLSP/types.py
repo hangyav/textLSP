@@ -227,10 +227,14 @@ class PositionDict():
         position = position_to_tuple(position)
         return self._positions[position]
 
+    def pop(self, position: Position):
+        position = position_to_tuple(position)
+        return self._positions.popitem(position)
+
     def update(self, old_position: Position, new_position: Position = None,
                new_value=None):
-        assert new_position is not None or new_value is not None, 'Either'
-        ' new_position or new_value should be specified.'
+        assert new_position is not None or new_value is not None, ' new_position'
+        ' or new_value should be specified.'
 
         old_position = position_to_tuple(old_position)
         new_position = position_to_tuple(new_position)
@@ -267,10 +271,18 @@ class PositionDict():
         )):
             del self._positions[key]
 
-    def irange(self, minimum: Position, maximum: Position, *args, **kwargs):
-        minimum = position_to_tuple(minimum)
-        maximum = position_to_tuple(maximum)
+    def irange(self, minimum: Position = None, maximum: Position = None, *args,
+               **kwargs):
+        if minimum is not None:
+            minimum = position_to_tuple(minimum)
+        if maximum is not None:
+            maximum = position_to_tuple(maximum)
+
         return self._positions.irange(*args, **kwargs)
+
+    def irange_values(self, *args, **kwargs):
+        for key in self.irange(*args, **kwargs):
+            yield self._positions[key]
 
     def __iter__(self):
         return iter(self._positions.values())

@@ -11,6 +11,9 @@ from lsprotocol.types import (
     Position,
     DidSaveTextDocumentParams,
     TextDocumentIdentifier,
+    CodeActionParams,
+    CodeActionContext,
+    Diagnostic,
 )
 
 from tests.lsp_test_client import session, utils
@@ -68,16 +71,50 @@ from tests.lsp_test_client import session, utils
     #         end=Position(line=1, character=18),
     #     ),
     # ),
+    (
+        'This is a sentence.\n'
+        'This is a sAntence with an error.\n'
+        'This is another sentence.',
+        (
+            Range(
+                start=Position(line=1, character=33),
+                end=Position(line=1, character=33),
+            ),
+            ' too',
+            False
+        ),
+        Range(
+            start=Position(line=1, character=10),
+            end=Position(line=1, character=18),
+        ),
+    ),
+    # (
+    #     'This is a sentence.\n'
+    #     'This is a sAntence with an error.\n'
+    #     'This is another sentence.',
+    #     (
+    #         Range(
+    #             start=Position(line=1, character=4),
+    #             end=Position(line=1, character=4),
+    #         ),
+    #         ' word',
+    #         False
+    #     ),
+    #     Range(
+    #         start=Position(line=1, character=15),
+    #         end=Position(line=1, character=23),
+    #     ),
+    # ),
 ])
-def test_diagnostics_line_shifts(text, edit, exp, json_converter, langtool_ls_onsave):
+def test_line_shifts(text, edit, exp, json_converter, langtool_ls_onsave):
     done = Event()
-    results = list()
+    diag_lst = list()
 
     langtool_ls_onsave.set_notification_callback(
         session.PUBLISH_DIAGNOSTICS,
         utils.get_notification_handler(
             event=done,
-            results=results
+            results=diag_lst
         ),
     )
 
@@ -93,7 +130,7 @@ def test_diagnostics_line_shifts(text, edit, exp, json_converter, langtool_ls_on
     langtool_ls_onsave.notify_did_open(
         json_converter.unstructure(open_params)
     )
-    done.wait()
+    assert done.wait(10)
     done.clear()
 
     change_params = DidChangeTextDocumentParams(
@@ -111,18 +148,37 @@ def test_diagnostics_line_shifts(text, edit, exp, json_converter, langtool_ls_on
     langtool_ls_onsave.notify_did_change(
         json_converter.unstructure(change_params)
     )
-
     ret = done.wait(1)
     done.clear()
 
     # no diagnostics notification of none has changed
     assert ret == edit[2]
     if edit[2]:
-        assert len(results) == 2
+        assert len(diag_lst) == 2
     else:
-        assert len(results) == 1
+        assert len(diag_lst) == 1
 
-    res = results[-1]['diagnostics'][0]['range']
+    res = diag_lst[-1]['diagnostics'][0]['range']
+    assert res == json_converter.unstructure(exp)
+
+    diag = diag_lst[-1]['diagnostics'][0]
+    diag = Diagnostic(
+        range=Range(
+            start=Position(**res['start']),
+            end=Position(**res['end']),
+        ),
+        message=diag['message'],
+    )
+    code_action_params = CodeActionParams(
+        TextDocumentIdentifier('dummy.txt'),
+        exp,
+        CodeActionContext([diag]),
+    )
+    actions_lst = langtool_ls_onsave.text_document_code_action(
+        json_converter.unstructure(code_action_params)
+    )
+    assert len(actions_lst) == 1
+    res = actions_lst[-1]['diagnostics'][0]['range']
     assert res == json_converter.unstructure(exp)
 
 
@@ -171,7 +227,7 @@ def test_diagnosttics_bug1(text, edit, exp, json_converter, langtool_ls_onsave):
     langtool_ls_onsave.notify_did_open(
         json_converter.unstructure(open_params)
     )
-    done.wait()
+    assert done.wait(10)
     done.clear()
 
     change_params = DidChangeTextDocumentParams(
@@ -189,7 +245,7 @@ def test_diagnosttics_bug1(text, edit, exp, json_converter, langtool_ls_onsave):
     langtool_ls_onsave.notify_did_change(
         json_converter.unstructure(change_params)
     )
-    done.wait()
+    assert done.wait(10)
     done.clear()
 
     save_params = DidSaveTextDocumentParams(
@@ -200,7 +256,7 @@ def test_diagnosttics_bug1(text, edit, exp, json_converter, langtool_ls_onsave):
     langtool_ls_onsave.notify_did_save(
         json_converter.unstructure(save_params)
     )
-    done.wait()
+    assert done.wait(10)
     done.clear()
     print(results)
 
