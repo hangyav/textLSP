@@ -578,7 +578,8 @@ def test_change_tracker(content, edits, exp):
     tracker = ChangeTracker(doc, True)
 
     for edit in edits:
-        tracker.update_document(edit)
+        doc.apply_change(edit)
+        tracker.update_document(edit, doc)
 
     assert tracker.get_changes() == exp
 
@@ -834,6 +835,35 @@ def test_change_tracker(content, edits, exp):
             ),
             'Introduction',
         ),
+    ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n'
+        '\\end{document}',
+        TextDocumentContentChangeEvent_Type1(
+            # delete last character: '.'
+            range=Range(
+                start=Position(
+                    line=5,
+                    character=18,
+                ),
+                end=Position(
+                    line=5,
+                    character=19,
+                ),
+            ),
+            text='',
+        ),
+        'Introduction\n'
+        '\n' +
+        'This is a sentence\n',
+        None,
+        None,
     ),
 ])
 def test_edits(content, change, exp, offset_test, position_test):

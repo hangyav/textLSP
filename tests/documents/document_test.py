@@ -350,7 +350,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
             ),
         ],
         [
-            Interval(169, 1),
+            Interval(169, 0),
         ],
     ),
     (
@@ -409,12 +409,48 @@ def test_get_sentence_at_offset(content, offset, length, exp):
             Interval(171, 1),
         ],
     ),
+    (
+        'This is a sentence.\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=0,
+                        character=19,
+                    ),
+                    end=Position(
+                        line=1,
+                        character=0,
+                    ),
+                ),
+                text='\nThis is a sentence.\n',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=1,
+                        character=19,
+                    ),
+                    end=Position(
+                        line=2,
+                        character=0,
+                    ),
+                ),
+                text='\nThis is a sentence.\n',
+            ),
+        ],
+        [
+            Interval(19, 20),
+            Interval(39, 21),
+        ],
+    ),
 ])
 def test_updates(content, edits, exp):
     doc = BaseDocument('DUMMY_URL', content)
     tracker = ChangeTracker(doc, True)
 
     for edit in edits:
-        tracker.update_document(edit)
+        doc.apply_change(edit)
+        tracker.update_document(edit, doc)
 
     assert tracker.get_changes() == exp

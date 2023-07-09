@@ -297,7 +297,7 @@ class Analyser():
             self.language_server.publish_stored_diagnostics(doc)
 
     def update_document(self, doc: Document, change: TextDocumentContentChangeEvent):
-        self._content_change_dict[doc.uri].update_document(change)
+        self._content_change_dict[doc.uri].update_document(change, doc)
 
     def did_save(self, params: DidSaveTextDocumentParams):
         if self.should_run_on(Analyser.CONFIGURATION_CHECK_ON_SAVE):

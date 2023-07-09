@@ -1,6 +1,7 @@
 import logging
 import tempfile
 import sys
+import copy
 
 from typing import Optional, Generator, List, Dict
 from dataclasses import dataclass
@@ -332,6 +333,8 @@ class TreeSitterDocument(CleanableDocument):
 
     def __init__(self, language_name, grammar_url, branch, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        #######################################################################
+        # Do not deepcopy these
         self._language = self.get_language(language_name, grammar_url, branch)
         self._parser = self.get_parser(
             language_name,
@@ -339,9 +342,22 @@ class TreeSitterDocument(CleanableDocument):
             branch,
             self._language
         )
-        self._text_intervals = None
         self._tree = None
         self._query = self._build_query()
+        #######################################################################
+
+        self._text_intervals = None
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            if k not in {'_language', '_parser', '_tree', '_query'}:
+                setattr(result, k, copy.deepcopy(v, memo))
+            else:
+                setattr(result, k, v)
+        return result
 
     @classmethod
     def build_library(cls, name, url, branch=None) -> None:
@@ -545,6 +561,14 @@ class TreeSitterDocument(CleanableDocument):
             edit_on_top,
     ):
         text_intervals = OffsetPositionIntervalList()
+
+        if start_point == new_end_point:
+            # DELETE
+            # We might select an empty subtree -> extend the range
+            start_point = (
+                start_point[0] if start_point[1] > 0 else start_point[0]-1,
+                start_point[1]-1 if start_point[1] > 0 else 0,
+            )
 
         offset = 0
         node_iter = self._iterate_text_nodes(
@@ -866,7 +890,8 @@ class DocumentTypeFactory():
 
 class ChangeTracker():
     def __init__(self, doc: BaseDocument, cleaned=False):
-        self.document = doc
+        self.document = None
+        self._set_document(doc)
         self.cleaned = cleaned
         length = len(doc.cleaned_source) if cleaned else len(doc.source)
         # list of tuples (span_length, was_changed)
@@ -874,7 +899,15 @@ class ChangeTracker():
         self._items = [(length, False)]
         self.full_document_change = False
 
-    def update_document(self, change: TextDocumentContentChangeEvent):
+    def _set_document(self, doc: BaseDocument):
+        # XXX not too memory efficient
+        self.document = copy.deepcopy(doc)
+
+    def update_document(
+            self,
+            change: TextDocumentContentChangeEvent,
+            updated_doc: BaseDocument
+    ):
         if self.full_document_change:
             return
 
@@ -908,12 +941,15 @@ class ChangeTracker():
         effective_change_length = max(effective_change_length, -1*start_offset)
         new_lst.append((effective_change_length, True))
 
-        new_lst.append((
+        tmp_item = (
             self._items[item_idx][0]-start_offset-range_length,
             self._items[item_idx][1]
-        ))
+        )
+        if tmp_item[0] > 0:
+            new_lst.append(tmp_item)
 
         self._replace_at(item_idx, new_lst)
+        self._set_document(updated_doc)
 
     def _get_offset_idx(self, offset):
         pos = 0
