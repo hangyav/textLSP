@@ -1,16 +1,19 @@
 import logging
 import tempfile
+import sys
 
 from typing import Optional, Generator, List, Dict
 from dataclasses import dataclass
+from itertools import chain
 
 from lsprotocol.types import (
     Range,
     Position,
     TextDocumentContentChangeEvent,
+    TextDocumentContentChangeEvent_Type1,
     TextDocumentContentChangeEvent_Type2,
 )
-from pygls.workspace import Document, position_from_utf16
+from pygls.workspace import Document, position_from_utf16, range_from_utf16
 from tree_sitter import Language, Parser, Tree, Node
 
 from ..utils import get_class, synchronized, git_clone, get_user_cache
@@ -242,8 +245,8 @@ class CleanableDocument(BaseDocument):
         raise NotImplementedError()
 
     def apply_change(self, change: TextDocumentContentChangeEvent) -> None:
-        super().apply_change(change)
         self._cleaned_source = None
+        super().apply_change(change)
 
     def position_at_offset(self, offset: int, cleaned=False) -> Position:
         if not cleaned:
@@ -337,6 +340,8 @@ class TreeSitterDocument(CleanableDocument):
             self._language
         )
         self._text_intervals = None
+        self._tree = None
+        self._query = self._build_query()
 
     @classmethod
     def build_library(cls, name, url, branch=None) -> None:
@@ -371,15 +376,25 @@ class TreeSitterDocument(CleanableDocument):
         parser.set_language(language)
         return parser
 
+    def _build_query(self):
+        raise NotImplementedError()
+
     def _parse_source(self):
         return self._parser.parse(bytes(self.source, 'utf-8'))
 
-    def _clean_source(self):
-        tree = self._parse_source()
+    @property
+    def tree(self) -> Tree:
+        if self._tree is None:
+            self._tree = self._parse_source()
+        return self._tree
+
+    def _clean_source(self, change: TextDocumentContentChangeEvent_Type1 = None):
         self._text_intervals = OffsetPositionIntervalList()
 
         offset = 0
-        for node in self._iterate_text_nodes(tree):
+        start_point = (0, 0)
+        end_point = (sys.maxsize, sys.maxsize)
+        for node in self._iterate_text_nodes(self.tree, start_point, end_point):
             node_len = len(node)
             self._text_intervals.add_interval_values(
                     offset,
@@ -394,8 +409,311 @@ class TreeSitterDocument(CleanableDocument):
 
         self._cleaned_source = ''.join(self._text_intervals.values)
 
-    def _iterate_text_nodes(self, tree: Tree) -> Generator[TextNode, None, None]:
+    def _iterate_text_nodes(
+            self,
+            tree: Tree,
+            start_point,
+            end_point,
+    ) -> Generator[TextNode, None, None]:
         raise NotImplementedError()
+
+    def _get_edit_positions(self, change):
+        lines = self.lines
+        change_range = change.range
+        change_range = range_from_utf16(lines, change_range)
+        start_line = change_range.start.line
+        start_col = change_range.start.character
+        end_line = change_range.end.line
+        end_col = change_range.end.character
+
+        start_byte = len(bytes(
+            ''.join(
+                lines[:start_line] + [lines[start_line][:start_col+1]]
+            ),
+            'utf-8',
+        ))
+        end_byte = len(bytes(
+            ''.join(
+                lines[:end_line] + [lines[end_line][:end_col+1]]
+            ),
+            'utf-8',
+        ))
+        text_bytes = len(bytes(change.text, 'utf-8'))
+
+        if end_byte - start_byte == 0:
+            # INSERT
+            old_end_byte = start_byte
+            new_end_byte = start_byte + text_bytes
+            start_point = (start_line, start_col)
+            old_end_point = start_point
+            new_lines = change.text.count('\n')
+            new_end_point = (
+                start_line + new_lines,
+                (start_col + text_bytes) if new_lines == 0 else len(bytes(
+                    change.text.split('\n')[-1],
+                    'utf-8'
+                )),
+            )
+        elif text_bytes == 0:
+            # DELETE
+            old_end_byte = end_byte
+            new_end_byte = start_byte
+            start_point = (start_line, start_col)
+            old_end_point = (end_line, end_col)
+            new_end_point = start_point
+        else:
+            # REPLACE
+            old_end_byte = end_byte
+            new_end_byte = start_byte + text_bytes
+            start_point = (start_line, start_col)
+            old_end_point = (end_line, end_col)
+
+            new_lines = change.text.count('\n')
+            deleted_lines = end_line - start_line
+            if new_lines == 0 and deleted_lines == 0:
+                new_end_line = end_line
+                new_end_col = end_col + text_bytes - (end_col - start_col)
+            elif new_lines > 0 and deleted_lines == 0:
+                new_end_line = end_line + new_lines
+                new_end_col = len(bytes(change.text.split('\n')[-1], 'utf-8'))
+            elif new_lines == 0 and deleted_lines > 0:
+                new_end_line = end_line - deleted_lines
+                new_end_col = end_col + text_bytes - (end_col - start_col)
+            else:
+                new_end_line = end_line + new_lines - deleted_lines
+                new_end_col = len(bytes(change.text.split('\n')[-1], 'utf-8'))
+
+            new_end_point = (
+                new_end_line,
+                new_end_col,
+            )
+
+        return (
+                start_line,
+                start_col,
+                end_line,
+                end_col,
+                start_byte,
+                old_end_byte,
+                new_end_byte,
+                text_bytes,
+                start_point,
+                old_end_point,
+                new_end_point,
+        )
+
+    def _get_last_node_for_edit(self, tree, start_point, end_point):
+        node = None
+        edit_on_top = False
+        old_tree_end_point = None
+        for node in self._query.captures(tree.root_node, start_point=start_point, end_point=end_point):
+            pass
+        if node is None:
+            # edit in empty line
+            for node in self._query.captures(
+                    tree.root_node,
+                    start_point=(start_point[0]-1, start_point[1]),
+                    end_point=end_point
+            ):
+                pass
+            if node is None:
+                # edit in empty line at the top of the file
+                edit_on_top = True
+                old_tree_end_point = self._query.captures(
+                    tree.root_node,
+                )[0][0].end_point
+                for node in self._query.captures(
+                        tree.root_node,
+                        start_point=(0, 0),
+                        end_point=old_tree_end_point
+                ):
+                    pass
+        return node[0], edit_on_top, old_tree_end_point
+
+    def _build_updated_text_intervals(
+            self,
+            start_line,
+            start_col,
+            end_line,
+            end_col,
+            start_point,
+            old_end_point,
+            new_end_point,
+            text_bytes,
+            old_last_edited_node,
+            old_tree_end_point,
+            edit_on_top,
+    ):
+        text_intervals = OffsetPositionIntervalList()
+
+        offset = 0
+        node_iter = self._iterate_text_nodes(
+            self.tree,
+            start_point if not edit_on_top else (0, 0),
+            new_end_point if not edit_on_top else old_tree_end_point,
+        )
+        node = next(node_iter)
+        # copy the text intervals up to the start of the change
+        for interval_idx in range(len(self._text_intervals)):
+            interval = self._text_intervals.get_interval(interval_idx)
+            interval_end = (
+                interval.position_range.end.line,
+                interval.position_range.end.character,
+            )
+            if interval_end >= node.start_point:
+                break
+
+            offset += len(interval.value)
+            text_intervals.add_interval(interval)
+
+        # handle the nodes that were in the edited subtree
+        tmp_intvals = list()
+        for node in chain([node], node_iter):
+            node_len = len(node)
+            tmp_intvals.append((
+                    offset,
+                    offset+node_len-1,
+                    node.start_point[0],
+                    node.start_point[1],
+                    node.end_point[0],
+                    node.end_point[1],
+                    node.text,
+            ))
+            offset += node_len
+        for interval in tmp_intvals[:-1]:
+            # there's always a newline return at the end of the file which
+            # is not needed if we are not really at the end of the file yet
+            text_intervals.add_interval_values(*interval)
+        offset -= len(tmp_intvals[-1][6])
+
+        # add remaining intervals shifted
+        last_idx = self._text_intervals.get_idx_at_position(
+            Position(
+                line=old_last_edited_node.start_point[0],
+                character=old_last_edited_node.start_point[1],
+            ),
+            strict=False,
+        )
+        last_idx += 1
+        if last_idx+1 >= len(self._text_intervals):
+            # we are actully at the end of the file so add the final newline
+            text_intervals.add_interval_values(*tmp_intvals[-1])
+        else:
+            for interval_idx in range(last_idx, len(self._text_intervals)):
+                interval = self._text_intervals.get_interval(interval_idx)
+                if (
+                    len(text_intervals) == 0
+                    and interval.value.count('\n') > 0
+                    and interval.value.strip() == ''
+                ):
+                    continue
+                node_len = len(interval.value)
+                # FIXME should not calculate for each but once for all after edit
+                # and separately for those which are affected by the edit, do we have those?
+                if interval.position_range.start.line > end_line:
+                    tmp = new_end_point[0] - old_end_point[0]
+                    start_line_offset = tmp
+                    start_char_offset = 0
+                    end_line_offset = tmp
+                    end_char_offset = 0
+                elif (interval.position_range.start.line == end_line
+                      and interval.position_range.start.character > end_col):
+                    tmp = text_bytes - (end_col - start_col)
+                    start_line_offset = 0
+                    start_char_offset = tmp
+                    end_line_offset = 0
+                    if interval.position_range.end.line > interval.position_range.start.line:
+                        end_char_offset = 0
+                    else:
+                        end_char_offset = tmp
+                else:
+                    start_line_offset = 0
+                    start_char_offset = 0
+                    end_line_offset = 0
+                    end_char_offset = 0
+
+                text_intervals.add_interval_values(
+                    offset,
+                    offset+node_len-1,
+                    interval.position_range.start.line + start_line_offset,
+                    interval.position_range.start.character + start_char_offset,
+                    interval.position_range.end.line + end_line_offset,
+                    interval.position_range.end.character + end_char_offset,
+                    interval.value,
+                )
+                offset += node_len
+
+        return text_intervals
+
+    def _apply_incremental_change(self, change: TextDocumentContentChangeEvent_Type1) -> None:
+        """Apply an ``Incremental`` text change to the document"""
+        if self._tree is None:
+            super()._apply_incremental_change(change)
+            return
+
+        tree = self.tree
+        (
+                start_line,
+                start_col,
+                end_line,
+                end_col,
+                start_byte,
+                old_end_byte,
+                new_end_byte,
+                text_bytes,
+                start_point,
+                old_end_point,
+                new_end_point,
+        ) = self._get_edit_positions(change)
+
+        # bookkeeping for later source cleaning
+        (
+            old_last_edited_node,
+            edit_on_top,
+            old_tree_end_point
+        ) = self._get_last_node_for_edit(
+            tree,
+            start_point,
+            old_end_point,
+        )
+
+        tree.edit(
+            start_byte=start_byte,
+            old_end_byte=old_end_byte,
+            new_end_byte=new_end_byte,
+            start_point=start_point,
+            old_end_point=old_end_point,
+            new_end_point=new_end_point,
+        )
+        super()._apply_incremental_change(change)
+        new_source = bytes(self.source, 'utf-8')
+        self._tree = self._parser.parse(
+            new_source,
+            tree
+        )
+
+        # rebuild the cleaned source
+        text_intervals = self._build_updated_text_intervals(
+            start_line,
+            start_col,
+            end_line,
+            end_col,
+            start_point,
+            old_end_point,
+            new_end_point,
+            text_bytes,
+            old_last_edited_node,
+            old_tree_end_point,
+            edit_on_top,
+        )
+
+        self._text_intervals = text_intervals
+        self._cleaned_source = ''.join(self._text_intervals.values)
+
+    def _apply_full_change(self, change: TextDocumentContentChangeEvent) -> None:
+        """Apply a ``Full`` text change to the document."""
+        super()._apply_full_change(change)
+        self._tree = None
 
     def position_at_offset(self, offset: int, cleaned=False) -> Position:
         if not cleaned:

@@ -86,7 +86,7 @@ class OffsetPositionIntervalList():
     def add_interval(self, interval: OffsetPositionInterval):
         self.add_interval_values(
             interval.offset_interval.start,
-            interval.offset_interval.end,
+            interval.offset_interval.start + interval.offset_interval.length,
             interval.position_range.start.line,
             interval.position_range.start.character,
             interval.position_range.end.line,

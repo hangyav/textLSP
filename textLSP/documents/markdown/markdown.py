@@ -55,7 +55,6 @@ class MarkDownDocument(TreeSitterDocument):
             *args,
             **kwargs,
         )
-        self._query = self._build_query()
 
     def _build_query(self):
         query_str = ''
@@ -71,13 +70,18 @@ class MarkDownDocument(TreeSitterDocument):
 
         return self._language.query(query_str)
 
-    def _iterate_text_nodes(self, tree: Tree) -> Generator[TextNode, None, None]:
+    def _iterate_text_nodes(
+            self,
+            tree: Tree,
+            start_point,
+            end_point,
+    ) -> Generator[TextNode, None, None]:
         lines = tree.text.decode('utf-8').split('\n')
 
         last_sent = None
         new_lines_after = list()
 
-        for node in self._query.captures(tree.root_node):
+        for node in self._query.captures(tree.root_node, start_point=start_point, end_point=end_point):
             # Check if we need some newlines after previous elements
             while len(new_lines_after) > 0:
                 if node[0].start_point > new_lines_after[0]:

@@ -1,5 +1,4 @@
-import bisect
-import copy
+import logging
 
 from typing import List, Optional
 from pygls.server import LanguageServer
@@ -34,6 +33,9 @@ from ..types import (
     ProgressBar,
     PositionDict,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class Analyser():

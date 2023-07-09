@@ -1,4 +1,6 @@
 import pytest
+import time
+import logging
 
 from lsprotocol.types import (
     Position,
@@ -571,7 +573,7 @@ def test_get_paragraphs_at_range(content, range, exp):
         ],
     ),
 ])
-def test_updates(content, edits, exp):
+def test_change_tracker(content, edits, exp):
     doc = LatexDocument('DUMMY_URL', content)
     tracker = ChangeTracker(doc, True)
 
@@ -579,3 +581,274 @@ def test_updates(content, edits, exp):
         tracker.update_document(edit)
 
     assert tracker.get_changes() == exp
+
+
+@pytest.mark.parametrize('content,change,exp,offset_test,position_test', [
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n' +
+        'This is a sentence.\n'*2 +
+        '\n'
+        '\\end{document}',
+        TextDocumentContentChangeEvent_Type1(
+            # add 'o' to Introduction
+            range=Range(
+                start=Position(
+                    line=3,
+                    character=13,
+                ),
+                end=Position(
+                    line=3,
+                    character=13,
+                ),
+            ),
+            text='o',
+        ),
+        'Introoduction\n'
+        '\n' +
+        ' '.join(['This is a sentence.']*2) +
+        '\n',
+        None,
+        None,
+    ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n' +
+        'This is a sentence.\n'*2 +
+        '\n'
+        '\\end{document}',
+        TextDocumentContentChangeEvent_Type1(
+            # delete 'o' from Introduction
+            range=Range(
+                start=Position(
+                    line=3,
+                    character=13,
+                ),
+                end=Position(
+                    line=3,
+                    character=14,
+                ),
+            ),
+            text='',
+        ),
+        'Intrduction\n'
+        '\n' +
+        ' '.join(['This is a sentence.']*2) +
+        '\n',
+        None,
+        None,
+    ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'An initial sentence.\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n' +
+        'This is a sentence.\n'*2 +
+        '\n'
+        '\\section{Conclusions}\n'
+        '\n'
+        'A final sentence.\n'
+        '\\end{document}',
+        TextDocumentContentChangeEvent_Type1(
+            # replace the word initial
+            range=Range(
+                start=Position(
+                    line=5,
+                    character=3,
+                ),
+                end=Position(
+                    line=5,
+                    character=10,
+                ),
+            ),
+            text='\n\naaaaaaa',
+        ),
+        'Introduction\n'
+        '\n'
+        'An\n'
+        '\n'
+        'aaaaaaa sentence.\n'
+        '\n'
+        'Introduction\n'
+        '\n' +
+        ' '.join(['This is a sentence.']*2) +
+        '\n\n'
+        'Conclusions\n'
+        '\n'
+        'A final sentence.\n',
+        (
+            -16,
+            'final',
+        ),
+        (
+            Position(
+                line=16,
+                character=2,
+            ),
+            'final',
+        ),
+    ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence. \\section{Inline} FooBar\n'
+        '\n'
+        '\\end{document}',
+        TextDocumentContentChangeEvent_Type1(
+            range=Range(
+                start=Position(
+                    line=5,
+                    character=2,
+                ),
+                end=Position(
+                    line=5,
+                    character=2,
+                ),
+            ),
+            text='oooooo',
+        ),
+        'Introduction\n'
+        '\n'
+        'Thoooooois is a sentence.\n'
+        '\n'
+        'Inline\n'
+        '\n'
+        'FooBar\n',
+        None,
+        (
+            Position(
+                line=5,
+                character=43,
+            ),
+            'FooBar',
+        ),
+    ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n'
+        '\\end{document}',
+        TextDocumentContentChangeEvent_Type1(
+            range=Range(
+                start=Position(
+                    line=6,
+                    character=0,
+                ),
+                end=Position(
+                    line=6,
+                    character=0,
+                ),
+            ),
+            text='o',
+        ),
+        'Introduction\n'
+        '\n' +
+        'This is a sentence. o\n',
+        None,
+        None,
+    ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\n'
+        '\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n'
+        '\\end{document}',
+        TextDocumentContentChangeEvent_Type1(
+            range=Range(
+                start=Position(
+                    line=2,
+                    character=0,
+                ),
+                end=Position(
+                    line=2,
+                    character=0,
+                ),
+            ),
+            text='o',
+        ),
+        'o\n'
+        '\n'
+        'Introduction\n'
+        '\n' +
+        'This is a sentence.\n',
+        None,
+        None,
+    ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        'o\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n'
+        '\\end{document}',
+        TextDocumentContentChangeEvent_Type1(
+            range=Range(
+                start=Position(
+                    line=2,
+                    character=0,
+                ),
+                end=Position(
+                    line=3,
+                    character=0,
+                ),
+            ),
+            text='',
+        ),
+        'Introduction\n'
+        '\n' +
+        'This is a sentence.\n',
+        (
+            0,
+            'Introduction',
+        ),
+        (
+            Position(
+                line=2,
+                character=9,
+            ),
+            'Introduction',
+        ),
+    ),
+])
+def test_edits(content, change, exp, offset_test, position_test):
+    doc = LatexDocument('DUMMY_URL', content)
+    doc.cleaned_source
+    start = time.time()
+    doc.apply_change(change)
+    assert doc.cleaned_source == exp
+    logging.warning(time.time() - start)
+
+    if offset_test is not None:
+        offset = offset_test[0]
+        if offset < 0:
+            offset = len(exp) + offset
+        assert doc.text_at_offset(offset, len(offset_test[1]), True) == offset_test[1]
+    if position_test is not None:
+        offset = doc.offset_at_position(position_test[0], True)
+        assert doc.text_at_offset(offset, len(position_test[1]), True) == position_test[1]

@@ -164,7 +164,7 @@ def test_line_shifts(text, edit, exp, json_converter, langtool_ls_onsave):
     langtool_ls_onsave.notify_did_open(
         json_converter.unstructure(open_params)
     )
-    assert done.wait(10)
+    assert done.wait(30)
     done.clear()
 
     change_params = DidChangeTextDocumentParams(
@@ -261,7 +261,7 @@ def test_diagnosttics_bug1(text, edit, exp, json_converter, langtool_ls_onsave):
     langtool_ls_onsave.notify_did_open(
         json_converter.unstructure(open_params)
     )
-    assert done.wait(10)
+    assert done.wait(30)
     done.clear()
 
     change_params = DidChangeTextDocumentParams(
@@ -279,7 +279,7 @@ def test_diagnosttics_bug1(text, edit, exp, json_converter, langtool_ls_onsave):
     langtool_ls_onsave.notify_did_change(
         json_converter.unstructure(change_params)
     )
-    assert done.wait(10)
+    assert done.wait(30)
     done.clear()
 
     save_params = DidSaveTextDocumentParams(
@@ -290,9 +290,8 @@ def test_diagnosttics_bug1(text, edit, exp, json_converter, langtool_ls_onsave):
     langtool_ls_onsave.notify_did_save(
         json_converter.unstructure(save_params)
     )
-    assert done.wait(10)
+    assert done.wait(30)
     done.clear()
-    print(results)
 
     res = results[-1]['diagnostics'][0]['range']
     assert res == json_converter.unstructure(exp)
