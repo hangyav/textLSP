@@ -441,6 +441,10 @@ class TreeSitterDocument(CleanableDocument):
         start_col = change_range.start.character
         end_line = change_range.end.line
         end_col = change_range.end.character
+        if end_line >= len(lines):
+            # this could happen eg when the last line is deleted
+            end_line = len(lines) - 1
+            end_col = len(lines[end_line]) - 1
 
         start_byte = len(bytes(
             ''.join(
@@ -521,29 +525,35 @@ class TreeSitterDocument(CleanableDocument):
     def _get_last_node_for_edit(self, tree, start_point, end_point):
         node = None
         edit_on_top = False
-        old_tree_end_point = None
-        for node in self._query.captures(tree.root_node, start_point=start_point, end_point=end_point):
-            pass
+        # old_tree_end_point = None
+        old_tree_end_point = self._query.captures(
+            tree.root_node,
+        )[-1][0].end_point
+
+        nodes = self._query.captures(tree.root_node, start_point=start_point, end_point=end_point)
+        if len(nodes) > 0:
+            node = nodes[-1]
+
         if node is None:
             # edit in empty line
-            for node in self._query.captures(
-                    tree.root_node,
-                    start_point=(start_point[0]-1, start_point[1]),
-                    end_point=end_point
-            ):
-                pass
+            nodes = self._query.captures(
+                tree.root_node,
+                start_point=(start_point[0]-1, start_point[1]),
+                end_point=end_point
+            )
+            if len(nodes) > 0:
+                node = nodes[-1]
+
             if node is None:
                 # edit in empty line at the top of the file
                 edit_on_top = True
-                old_tree_end_point = self._query.captures(
+                nodes = self._query.captures(
                     tree.root_node,
-                )[0][0].end_point
-                for node in self._query.captures(
-                        tree.root_node,
-                        start_point=(0, 0),
-                        end_point=old_tree_end_point
-                ):
-                    pass
+                    start_point=(0, 0),
+                    end_point=old_tree_end_point
+                )
+                node = nodes[-1]
+
         return node[0], edit_on_top, old_tree_end_point
 
     def _build_updated_text_intervals(
@@ -571,10 +581,25 @@ class TreeSitterDocument(CleanableDocument):
             )
 
         offset = 0
+        if edit_on_top:
+            sp = (0, 0)
+            ep = old_tree_end_point
+        elif start_point > old_tree_end_point:
+            # edit at the end of the file
+            # need to extend the range to include the last node to avoid getting
+            # a single newline node in node_iter below
+            if old_end_point[1] > 0:
+                sp = (old_tree_end_point[0], old_tree_end_point[1]-1)
+            else:
+                sp = (old_tree_end_point[0]-1, 0)
+            ep = new_end_point
+        else:
+            sp = start_point
+            ep = new_end_point
         node_iter = self._iterate_text_nodes(
             self.tree,
-            start_point if not edit_on_top else (0, 0),
-            new_end_point if not edit_on_top else old_tree_end_point,
+            sp,
+            ep,
         )
         node = next(node_iter)
         # copy the text intervals up to the start of the change
@@ -642,10 +667,11 @@ class TreeSitterDocument(CleanableDocument):
                     end_char_offset = 0
                 elif (interval.position_range.start.line == end_line
                       and interval.position_range.start.character > end_col):
+                    row_tmp = new_end_point[0] - old_end_point[0]
                     tmp = text_bytes - (end_col - start_col)
-                    start_line_offset = 0
+                    start_line_offset = row_tmp
                     start_char_offset = tmp
-                    end_line_offset = 0
+                    end_line_offset = row_tmp
                     if interval.position_range.end.line > interval.position_range.start.line:
                         end_char_offset = 0
                     else:
@@ -929,24 +955,47 @@ class ChangeTracker():
         item_idx, item_offset = self._get_offset_idx(start_offset)
         change_length = len(change.text)
         range_length = end_offset-start_offset
-        start_offset = start_offset - item_offset
+        relative_start_offset = start_offset - item_offset
 
-        if start_offset > 0:
-            new_lst.append((start_offset, self._items[item_idx][1]))
+        if relative_start_offset > 0:
+            # add item from the beginning of the item to the start of the change
+            new_lst.append((relative_start_offset, self._items[item_idx][1]))
 
-        if change_length >= range_length:
-            effective_change_length = change_length
+        if start_offset == end_offset and change_length == 0:
+            # nothing to do (I'm not sure what this is)
+            self._set_document(updated_doc)
+            return
+
+        if change_length == 0:
+            # deletion
+            new_lst.append((0, True))
+
+            tmp_item = (
+                self._items[item_idx][0]-relative_start_offset-range_length,
+                self._items[item_idx][1]
+            )
+            if tmp_item[0] != 0:
+                new_lst.append(tmp_item)
+        elif range_length == 0:
+            # insertion
+            new_lst.append((change_length, True))
+
+            tmp_item = (
+                self._items[item_idx][0]-relative_start_offset,
+                self._items[item_idx][1]
+            )
+            if tmp_item[0] > 0:
+                new_lst.append(tmp_item)
         else:
-            effective_change_length = change_length-range_length
-        effective_change_length = max(effective_change_length, -1*start_offset)
-        new_lst.append((effective_change_length, True))
+            # replacement
+            new_lst.append((change_length, True))
 
-        tmp_item = (
-            self._items[item_idx][0]-start_offset-range_length,
-            self._items[item_idx][1]
-        )
-        if tmp_item[0] > 0:
-            new_lst.append(tmp_item)
+            tmp_item = (
+                self._items[item_idx][0]-relative_start_offset-(change_length-range_length),
+                self._items[item_idx][1]
+            )
+            if tmp_item[0] > 0:
+                new_lst.append(tmp_item)
 
         self._replace_at(item_idx, new_lst)
         self._set_document(updated_doc)
@@ -979,6 +1028,7 @@ class ChangeTracker():
             return [Interval(0, doc_length)]
 
         res = list()
+        seen = set()
         pos = 0
         for item in self._items:
             if item[1]:
@@ -989,7 +1039,20 @@ class ChangeTracker():
                     length = min(length*-1, doc_length-pos)
                 else:
                     position = pos
-                res.append(Interval(position, length))
+
+                if position >= doc_length:
+                    position = doc_length-1
+                    length = 0
+
+                if length == 0 and position > 0:
+                    position -= 1
+                    length = 1
+
+                intv = Interval(position, length)
+
+                if intv not in seen:
+                    res.append(intv)
+                    seen.add(intv)
             pos += max(0, item[0])
 
         return res

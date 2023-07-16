@@ -13,6 +13,7 @@ class LatexDocument(TreeSitterDocument):
     CURLY_GROUP = 'curly_group'
     ENUM_ITEM = 'enum_item'
     GENERIC_ENVIRONMENT = 'generic_environment'
+    ERROR = 'ERROR'  # content in syntex error, e.g. missing closing environment
 
     NODE_CONTENT = 'content'
     NODE_NEWLINE_BEFORE_AFTER = 'newline_before_after'
@@ -24,6 +25,7 @@ class LatexDocument(TreeSitterDocument):
         CURLY_GROUP,
         ENUM_ITEM,
         GENERIC_ENVIRONMENT,
+        ERROR,
     }
 
     NEWLINE_BEFORE_AFTER_CURLY_PARENT = {

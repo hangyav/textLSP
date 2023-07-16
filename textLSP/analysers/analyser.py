@@ -94,12 +94,17 @@ class Analyser():
             if type(change) == TextDocumentContentChangeEvent_Type2:
                 continue
 
+            if change.range.start != change.range.end:
+                num = self.remove_code_items_at_rage(doc, change.range, (True, False))
+                should_update_diagnostics = should_update_diagnostics or num > 0
+
+            change_text_len = len(change.text)
             line_diff = change.range.end.line - change.range.start.line
             diff = change.text.count('\n') - line_diff
             if diff == 0:
-                in_line_diff = change.range.end.character - change.range.start.character
-                in_line_diff += len(change.text)
-                if in_line_diff >= 0:
+                in_line_diff = change.range.start.character - change.range.end.character
+                in_line_diff += change_text_len
+                if in_line_diff != 0:
                     # in only some edit in a given line, let's shift the items
                     # in the line
                     next_pos = Position(
@@ -164,7 +169,10 @@ class Analyser():
                 val += diff
                 accumulative_shifts.append((change.range.start, val, change))
         pos = doc.last_position(True)
-        pos = Position(line=pos.line+1, character=0)
+        pos = Position(
+            line=pos.line - (accumulative_shifts[-1][1] if len(accumulative_shifts) else 0) + 1,
+            character=0
+        )
         accumulative_shifts.append((pos, val))
 
         if len(accumulative_shifts) == 0:
@@ -286,13 +294,13 @@ class Analyser():
                 )
             else:
                 changes = self._content_change_dict[doc.uri].get_changes()
+                self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
                 with ProgressBar(
                         self.language_server,
                         f'{self.name} checking',
                         token=self._progressbar_token
                 ):
                     self._did_change(doc, changes)
-                self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
         elif should_update_diagnostics:
             self.language_server.publish_stored_diagnostics(doc)
 
@@ -310,13 +318,13 @@ class Analyser():
                     )
                 else:
                     changes = self._content_change_dict[doc.uri].get_changes()
+                    self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
                     with ProgressBar(
                             self.language_server,
                             f'{self.name} checking',
                             token=self._progressbar_token
                     ):
                         self._did_change(doc, changes)
-                    self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
 
     def _did_close(self, doc: Document):
         pass
@@ -366,9 +374,11 @@ class Analyser():
             self._diagnostics_dict[doc.uri].add(diag.range.start, diag)
         self.language_server.publish_stored_diagnostics(doc)
 
-    def remove_code_items_at_rage(self, doc: Document, pos_range: Range):
-        self._diagnostics_dict[doc.uri].remove_between(pos_range)
-        self._code_actions_dict[doc.uri].remove_between(pos_range)
+    def remove_code_items_at_rage(self, doc: Document, pos_range: Range, inclusive=(True, True)):
+        num = 0
+        num += self._diagnostics_dict[doc.uri].remove_between(pos_range, inclusive)
+        num += self._code_actions_dict[doc.uri].remove_between(pos_range, inclusive)
+        return num
 
     def init_code_actions(self, doc: Document):
         self._code_actions_dict[doc.uri] = PositionDict()

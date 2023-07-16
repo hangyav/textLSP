@@ -255,21 +255,29 @@ class PositionDict():
 
     def remove_from(self, position: Position, inclusive=True):
         position = position_to_tuple(position)
+        num = 0
         for key in list(self._positions.irange(
             minimum=position,
             inclusive=(inclusive, False)
         )):
             del self._positions[key]
+            num += 1
+
+        return num
 
     def remove_between(self, range: Range, inclusive=(True, True)):
         minimum = position_to_tuple(range.start)
         maximum = position_to_tuple(range.end)
+        num = 0
         for key in list(self._positions.irange(
             minimum=minimum,
             maximum=maximum,
             inclusive=inclusive,
         )):
             del self._positions[key]
+            num += 1
+
+        return num
 
     def irange(self, minimum: Position = None, maximum: Position = None, *args,
                **kwargs):

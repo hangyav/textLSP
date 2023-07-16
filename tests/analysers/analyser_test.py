@@ -237,7 +237,7 @@ def test_line_shifts(text, edit, exp, json_converter, langtool_ls_onsave):
         ),
     ),
 ])
-def test_diagnosttics_bug1(text, edit, exp, json_converter, langtool_ls_onsave):
+def test_diagnostics_bug1(text, edit, exp, json_converter, langtool_ls_onsave):
     done = Event()
     results = list()
 
@@ -295,3 +295,119 @@ def test_diagnosttics_bug1(text, edit, exp, json_converter, langtool_ls_onsave):
 
     res = results[-1]['diagnostics'][0]['range']
     assert res == json_converter.unstructure(exp)
+
+
+def test_diagnostics_bug2(json_converter, langtool_ls_onsave):
+    text = ('\\documentclass[11pt]{article}\n'
+            + '\\begin{document}\n'
+            + 'o\n'
+            + '\\section{Thes}\n'
+            + '\n'
+            + 'This is a sentence.\n'
+            + '\n'
+            + '\\end{document}')
+
+    done = Event()
+    results = list()
+
+    langtool_ls_onsave.set_notification_callback(
+        session.PUBLISH_DIAGNOSTICS,
+        utils.get_notification_handler(
+            event=done,
+            results=results
+        ),
+    )
+
+    open_params = DidOpenTextDocumentParams(
+        TextDocumentItem(
+            uri='dummy.tex',
+            language_id='tex',
+            version=1,
+            text=text,
+        )
+    )
+
+    langtool_ls_onsave.notify_did_open(
+        json_converter.unstructure(open_params)
+    )
+    assert done.wait(30)
+    done.clear()
+
+    change_params = DidChangeTextDocumentParams(
+        text_document=VersionedTextDocumentIdentifier(
+            version=1,
+            uri='dummy.tex',
+        ),
+        content_changes=[
+            TextDocumentContentChangeEvent_Type1(
+                Range(
+                    start=Position(line=2, character=0),
+                    end=Position(line=3, character=0),
+                ),
+                '',
+            )
+        ]
+    )
+    langtool_ls_onsave.notify_did_change(
+        json_converter.unstructure(change_params)
+    )
+    assert done.wait(30)
+    done.clear()
+
+    save_params = DidSaveTextDocumentParams(
+        text_document=TextDocumentIdentifier(
+            'dummy.tex'
+        )
+    )
+    langtool_ls_onsave.notify_did_save(
+        json_converter.unstructure(save_params)
+    )
+    assert done.wait(30)
+    done.clear()
+
+    change_params = DidChangeTextDocumentParams(
+        text_document=VersionedTextDocumentIdentifier(
+            version=2,
+            uri='dummy.tex',
+        ),
+        content_changes=[
+            TextDocumentContentChangeEvent_Type1(
+                Range(
+                    start=Position(line=1, character=16),
+                    end=Position(line=2, character=0),
+                ),
+                '\no\n',
+            )
+        ]
+    )
+    langtool_ls_onsave.notify_did_change(
+        json_converter.unstructure(change_params)
+    )
+    assert done.wait(30)
+    done.clear()
+
+    save_params = DidSaveTextDocumentParams(
+        text_document=TextDocumentIdentifier(
+            'dummy.tex'
+        )
+    )
+    langtool_ls_onsave.notify_did_save(
+        json_converter.unstructure(save_params)
+    )
+    assert done.wait(30)
+    done.clear()
+
+    exp_lst = [
+        Range(
+            start=Position(line=2, character=0),
+            end=Position(line=2, character=1),
+        ),
+        Range(
+            start=Position(line=3, character=9),
+            end=Position(line=3, character=13),
+        ),
+    ]
+    res_lst = results[-1]['diagnostics']
+    assert len(res_lst) == len(exp_lst)
+    for exp, res in zip(exp_lst, res_lst):
+        assert res['range'] == json_converter.unstructure(exp)

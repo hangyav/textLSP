@@ -350,7 +350,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
             ),
         ],
         [
-            Interval(169, 0),
+            Interval(168, 1),
         ],
     ),
     (
@@ -442,6 +442,82 @@ def test_get_sentence_at_offset(content, offset, length, exp):
         [
             Interval(19, 20),
             Interval(39, 21),
+        ],
+    ),
+    (
+        'This is a sentence.\n'
+        'This is a sentence.\n'
+        'This is a sentence.\n',
+        [
+            # Last two sentences deleted as done by nvim
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=0,
+                        character=19,
+                    ),
+                    end=Position(
+                        line=0,
+                        character=19,
+                    ),
+                ),
+                text='',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=1,
+                        character=0,
+                    ),
+                    end=Position(
+                        line=2,
+                        character=0,
+                    ),
+                ),
+                text='',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=1,
+                        character=0,
+                    ),
+                    end=Position(
+                        line=1,
+                        character=19,
+                    ),
+                ),
+                text='',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=0,
+                        character=19,
+                    ),
+                    end=Position(
+                        line=0,
+                        character=19,
+                    ),
+                ),
+                text='',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=1,
+                        character=0,
+                    ),
+                    end=Position(
+                        line=2,
+                        character=0,
+                    ),
+                ),
+                text='',
+            ),
+        ],
+        [
+            Interval(18, 1),
         ],
     ),
 ])

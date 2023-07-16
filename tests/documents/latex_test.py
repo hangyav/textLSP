@@ -572,6 +572,33 @@ def test_get_paragraphs_at_range(content, range, exp):
             Interval(35, 1),
         ],
     ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=6,
+                        character=0,
+                    ),
+                    end=Position(
+                        line=7,
+                        character=0,
+                    ),
+                ),
+                text='\n\\end{document}\n',
+            ),
+        ],
+        [
+            Interval(33, 16),
+        ],
+    ),
 ])
 def test_change_tracker(content, edits, exp):
     doc = LatexDocument('DUMMY_URL', content)
@@ -691,6 +718,10 @@ def test_change_tracker(content, edits, exp):
         (
             -16,
             'final',
+            Range(
+                start=Position(16, 2),
+                end=Position(16, 6),
+            ),
         ),
         (
             Position(
@@ -827,6 +858,10 @@ def test_change_tracker(content, edits, exp):
         (
             0,
             'Introduction',
+            Range(
+                start=Position(2, 9),
+                end=Position(2, 20),
+            ),
         ),
         (
             Position(
@@ -865,6 +900,92 @@ def test_change_tracker(content, edits, exp):
         None,
         None,
     ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n'
+        '\\end{document}\n'
+        '\n',
+        TextDocumentContentChangeEvent_Type1(
+            # delete last character: '.'
+            range=Range(
+                start=Position(
+                    line=8,
+                    character=0,
+                ),
+                end=Position(
+                    line=9,
+                    character=0,
+                ),
+            ),
+            text='',
+        ),
+        'Introduction\n'
+        '\n' +
+        'This is a sentence.\n',
+        None,
+        None,
+    ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n',
+        TextDocumentContentChangeEvent_Type1(
+            range=Range(
+                start=Position(
+                    line=6,
+                    character=0,
+                ),
+                end=Position(
+                    line=7,
+                    character=0,
+                ),
+            ),
+            text='\n\\end{document}\n',
+        ),
+        'Introduction\n'
+        '\n' +
+        'This is a sentence.\n',
+        None,
+        None,
+    ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        '\\section{Introduction}\n'
+        '\n'
+        'This is a sentence.\n'
+        '\n'
+        '\\end{document}',
+        TextDocumentContentChangeEvent_Type1(
+            range=Range(
+                start=Position(
+                    line=1,
+                    character=16,
+                ),
+                end=Position(
+                    line=2,
+                    character=0,
+                ),
+            ),
+            text='\no\n',
+        ),
+        'o\n'
+        '\n'
+        'Introduction\n'
+        '\n' +
+        'This is a sentence.\n',
+        None,
+        None,
+    ),
 ])
 def test_edits(content, change, exp, offset_test, position_test):
     doc = LatexDocument('DUMMY_URL', content)
@@ -879,6 +1000,8 @@ def test_edits(content, change, exp, offset_test, position_test):
         if offset < 0:
             offset = len(exp) + offset
         assert doc.text_at_offset(offset, len(offset_test[1]), True) == offset_test[1]
+        if len(offset_test) > 2:
+            assert doc.range_at_offset(offset, len(offset_test[1]), True) == offset_test[2]
     if position_test is not None:
         offset = doc.offset_at_position(position_test[0], True)
         assert doc.text_at_offset(offset, len(position_test[1]), True) == position_test[1]
