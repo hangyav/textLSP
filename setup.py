@@ -42,6 +42,7 @@ setup(
         'torch==1.13.1',
         'openai==0.26.4',
         'transformers==4.25.1',
+        'sortedcontainers==2.4.0',
     ],
     extras_require={
         'dev': [
