@@ -8,7 +8,10 @@ from textLSP.documents.document import BaseDocument
 def analyser():
     return HFCheckerAnalyser(
         None,
-        {HFCheckerAnalyser.CONFIGURATION_MIN_LENGTH: 40},
+        {
+            HFCheckerAnalyser.CONFIGURATION_MIN_LENGTH: 40,
+            HFCheckerAnalyser.CONFIGURATION_MODEL: 'pszemraj/grammar-synthesis-small',
+        },
         'hf_checker',
     )
 

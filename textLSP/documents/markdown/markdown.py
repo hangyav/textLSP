@@ -140,7 +140,7 @@ class MarkDownDocument(TreeSitterDocument):
                     ),
                     end_point=(
                         inline_node.start_point[0],
-                        inline_node.start_point[1]+line_offset+1
+                        inline_node.start_point[1]+line_offset
                     ),
                 )
                 line_offset += 1
@@ -154,7 +154,7 @@ class MarkDownDocument(TreeSitterDocument):
                 ),
                 end_point=(
                     inline_node.start_point[0],
-                    inline_node.start_point[1]+line_offset+token_len
+                    inline_node.start_point[1]+line_offset+token_len-1
                 ),
             )
             yield node

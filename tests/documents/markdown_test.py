@@ -76,3 +76,30 @@ def test_clean(src, clean):
     )
 
     assert doc.cleaned_source == clean
+
+
+@pytest.mark.parametrize('src,offset,exp', [
+    (
+        'This is a sentence.\n',
+        # (offset, length)
+        (0, 4),
+        'This',
+    ),
+])
+def test_highlight(src, offset, exp):
+    doc = MarkDownDocument(
+        'tmp.md',
+        src,
+    )
+
+    pos_range = doc.range_at_offset(offset[0], offset[1], True)
+
+    lines = src.splitlines(True)
+    if pos_range.start.line == pos_range.end.line:
+        res = lines[pos_range.start.line][pos_range.start.character:pos_range.end.character+1]
+    else:
+        res = lines[pos_range.start.line][pos_range.start.character:]
+        res += ''.join([lines[idx] for idx in range(pos_range.start.line+1, pos_range.end.line)])
+        res += lines[pos_range.end.line][:pos_range.end.character+1]
+
+    assert res == exp
