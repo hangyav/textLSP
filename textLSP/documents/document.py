@@ -638,12 +638,11 @@ class TreeSitterDocument(CleanableDocument):
         # add remaining intervals shifted
         last_idx = self._text_intervals.get_idx_at_position(
             Position(
-                line=old_last_edited_node.start_point[0],
-                character=old_last_edited_node.start_point[1],
+                line=old_last_edited_node.end_point[0],
+                character=old_last_edited_node.end_point[1],
             ),
             strict=False,
         )
-        last_idx += 1
         if last_idx+1 >= len(self._text_intervals):
             # we are actully at the end of the file so add the final newline
             text_intervals.add_interval_values(*tmp_intvals[-1])

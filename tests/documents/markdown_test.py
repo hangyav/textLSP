@@ -1,6 +1,11 @@
 import pytest
 
 from textLSP.documents.markdown.markdown import MarkDownDocument
+from lsprotocol.types import (
+    Position,
+    Range,
+    TextDocumentContentChangeEvent_Type1
+)
 
 
 @pytest.mark.parametrize('src,clean', [
@@ -103,3 +108,42 @@ def test_highlight(src, offset, exp):
         res += lines[pos_range.end.line][:pos_range.end.character+1]
 
     assert res == exp
+
+
+@pytest.mark.parametrize('content,change,exp,offset_test,position_test', [
+    (
+        'This is a sentence.',
+        TextDocumentContentChangeEvent_Type1(
+            range=Range(
+                start=Position(
+                    line=0,
+                    character=0,
+                ),
+                end=Position(
+                    line=0,
+                    character=4,
+                ),
+            ),
+            text='That',
+        ),
+        'That is a sentence.\n',
+        None,
+        None,
+    ),
+])
+def test_edits(content, change, exp, offset_test, position_test):
+    doc = MarkDownDocument('DUMMY_URL', content)
+    doc.cleaned_source
+    doc.apply_change(change)
+    assert doc.cleaned_source == exp
+
+    if offset_test is not None:
+        offset = offset_test[0]
+        if offset < 0:
+            offset = len(exp) + offset
+        assert doc.text_at_offset(offset, len(offset_test[1]), True) == offset_test[1]
+        if len(offset_test) > 2:
+            assert doc.range_at_offset(offset, len(offset_test[1]), True) == offset_test[2]
+    if position_test is not None:
+        offset = doc.offset_at_position(position_test[0], True)
+        assert doc.text_at_offset(offset, len(position_test[1]), True) == position_test[1]
