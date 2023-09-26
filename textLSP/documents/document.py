@@ -526,9 +526,13 @@ class TreeSitterDocument(CleanableDocument):
         node = None
         edit_on_top = False
         # old_tree_end_point = None
-        old_tree_end_point = self._query.captures(
+        capture = self._query.captures(
             tree.root_node,
-        )[-1][0].end_point
+        )
+        if len(capture) == 0:
+            return None, None, None
+
+        old_tree_end_point = capture[-1][0].end_point
 
         nodes = self._query.captures(tree.root_node, start_point=start_point, end_point=end_point)
         if len(nodes) > 0:
@@ -741,23 +745,26 @@ class TreeSitterDocument(CleanableDocument):
             tree
         )
 
-        # rebuild the cleaned source
-        text_intervals = self._build_updated_text_intervals(
-            start_line,
-            start_col,
-            end_line,
-            end_col,
-            start_point,
-            old_end_point,
-            new_end_point,
-            text_bytes,
-            old_last_edited_node,
-            old_tree_end_point,
-            edit_on_top,
-        )
+        if old_tree_end_point is not None:
+            # rebuild the cleaned source
+            text_intervals = self._build_updated_text_intervals(
+                start_line,
+                start_col,
+                end_line,
+                end_col,
+                start_point,
+                old_end_point,
+                new_end_point,
+                text_bytes,
+                old_last_edited_node,
+                old_tree_end_point,
+                edit_on_top,
+            )
 
-        self._text_intervals = text_intervals
-        self._cleaned_source = ''.join(self._text_intervals.values)
+            self._text_intervals = text_intervals
+            self._cleaned_source = ''.join(self._text_intervals.values)
+        else:
+            self._clean_source()
 
     def _apply_full_change(self, change: TextDocumentContentChangeEvent) -> None:
         """Apply a ``Full`` text change to the document."""
