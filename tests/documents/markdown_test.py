@@ -110,31 +110,124 @@ def test_highlight(src, offset, exp):
     assert res == exp
 
 
-@pytest.mark.parametrize('content,change,exp,offset_test,position_test', [
+@pytest.mark.parametrize('content,changes,exp,offset_test,position_test', [
     (
         'This is a sentence.',
-        TextDocumentContentChangeEvent_Type1(
-            range=Range(
-                start=Position(
-                    line=0,
-                    character=0,
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=0,
+                        character=0,
+                    ),
+                    end=Position(
+                        line=0,
+                        character=4,
+                    ),
                 ),
-                end=Position(
-                    line=0,
-                    character=4,
-                ),
+                text='That',
             ),
-            text='That',
-        ),
+        ],
         'That is a sentence.\n',
         None,
         None,
     ),
+    (
+        # Based on a bug in nvim
+        'This is a sentence. This is another.\n'
+        '\n'
+        'This is a new paragraph.\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=0, character=19),
+                    end=Position(line=0, character=36)
+                ),
+                text='',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=1, character=0),
+                    end=Position(line=2, character=0)
+                ),
+                text='',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=1, character=0),
+                    end=Position(line=1, character=24)
+                ),
+                text='',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=0, character=19),
+                    end=Position(line=0, character=19)
+                ),
+                text='',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=1, character=0),
+                    end=Position(line=2, character=0)
+                ),
+                text='',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=0, character=19),
+                    end=Position(line=1, character=0)
+                ),
+                text='\n\n',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=1, character=0),
+                    end=Position(line=1, character=0)
+                ),
+                text='\n',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=0),
+                    end=Position(line=2, character=0)
+                ),
+                text='A',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=1),
+                    end=Position(line=2, character=1)
+                ),
+                text='s',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=2),
+                    end=Position(line=2, character=2)
+                ),
+                text='d',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=3),
+                    end=Position(line=2, character=3)
+                ),
+                text='f',
+            ),
+        ],
+        'This is a sentence.\n'
+        '\n'
+        'Asdf\n',
+        None,
+        None,
+    ),
 ])
-def test_edits(content, change, exp, offset_test, position_test):
+def test_edits(content, changes, exp, offset_test, position_test):
     doc = MarkDownDocument('DUMMY_URL', content)
     doc.cleaned_source
-    doc.apply_change(change)
+    for change in changes:
+        doc.apply_change(change)
     assert doc.cleaned_source == exp
 
     if offset_test is not None:

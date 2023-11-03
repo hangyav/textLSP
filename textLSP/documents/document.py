@@ -524,41 +524,29 @@ class TreeSitterDocument(CleanableDocument):
 
     def _get_last_node_for_edit(self, tree, start_point, end_point):
         node = None
-        edit_on_top = False
-        # old_tree_end_point = None
         capture = self._query.captures(
             tree.root_node,
         )
         if len(capture) == 0:
-            return None, None, None
+            return None, None
 
         old_tree_end_point = capture[-1][0].end_point
 
-        nodes = self._query.captures(tree.root_node, start_point=start_point, end_point=end_point)
-        if len(nodes) > 0:
-            node = nodes[-1]
+        while True:
+            nodes = self._query.captures(tree.root_node, start_point=start_point, end_point=end_point)
 
-        if node is None:
-            # edit in empty line
-            nodes = self._query.captures(
-                tree.root_node,
-                start_point=(start_point[0]-1, start_point[1]),
-                end_point=end_point
-            )
             if len(nodes) > 0:
                 node = nodes[-1]
+                break
 
-            if node is None:
-                # edit in empty line at the top of the file
-                edit_on_top = True
-                nodes = self._query.captures(
-                    tree.root_node,
-                    start_point=(0, 0),
-                    end_point=old_tree_end_point
-                )
-                node = nodes[-1]
+            start_point = (start_point[0]-1, 0)
+            if start_point[0] < 0:
+                return None, None
 
-        return node[0], edit_on_top, old_tree_end_point
+        return Range(
+                start=Position(*node[0].start_point),
+                end=Position(*node[0].end_point)
+            ), old_tree_end_point
 
     def _build_updated_text_intervals(
             self,
@@ -572,7 +560,6 @@ class TreeSitterDocument(CleanableDocument):
             text_bytes,
             old_last_edited_node,
             old_tree_end_point,
-            edit_on_top,
     ):
         text_intervals = OffsetPositionIntervalList()
 
@@ -585,17 +572,14 @@ class TreeSitterDocument(CleanableDocument):
             )
 
         offset = 0
-        if edit_on_top:
-            sp = (0, 0)
-            ep = old_tree_end_point
-        elif start_point > old_tree_end_point:
+        if start_point > old_tree_end_point:
             # edit at the end of the file
             # need to extend the range to include the last node to avoid getting
             # a single newline node in node_iter below
             if old_end_point[1] > 0:
-                sp = (old_tree_end_point[0], old_tree_end_point[1]-1)
+                sp = (old_tree_end_point[0], max(0, old_tree_end_point[1]-1))
             else:
-                sp = (old_tree_end_point[0]-1, 0)
+                sp = (max(0, old_tree_end_point[0]-1), 0)
             ep = new_end_point
         else:
             sp = start_point
@@ -642,8 +626,8 @@ class TreeSitterDocument(CleanableDocument):
         # add remaining intervals shifted
         last_idx = self._text_intervals.get_idx_at_position(
             Position(
-                line=old_last_edited_node.end_point[0],
-                character=old_last_edited_node.end_point[1],
+                line=old_last_edited_node.end.line,
+                character=old_last_edited_node.end.character,
             ),
             strict=False,
         )
@@ -669,7 +653,7 @@ class TreeSitterDocument(CleanableDocument):
                     end_line_offset = tmp
                     end_char_offset = 0
                 elif (interval.position_range.start.line == end_line
-                      and interval.position_range.start.character > end_col):
+                      and interval.position_range.start.character >= end_col):
                     row_tmp = new_end_point[0] - old_end_point[0]
                     tmp = text_bytes - (end_col - start_col)
                     start_line_offset = row_tmp
@@ -722,7 +706,6 @@ class TreeSitterDocument(CleanableDocument):
         # bookkeeping for later source cleaning
         (
             old_last_edited_node,
-            edit_on_top,
             old_tree_end_point
         ) = self._get_last_node_for_edit(
             tree,
@@ -758,7 +741,6 @@ class TreeSitterDocument(CleanableDocument):
                 text_bytes,
                 old_last_edited_node,
                 old_tree_end_point,
-                edit_on_top,
             )
 
             self._text_intervals = text_intervals
