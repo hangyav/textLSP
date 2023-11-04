@@ -95,7 +95,17 @@ class Analyser():
                 continue
 
             if change.range.start != change.range.end:
-                num = self.remove_code_items_at_rage(doc, change.range, (True, False))
+                tmp_range = Range(
+                    start=Position(
+                        line=change.range.start.line-val,
+                        character=change.range.start.character,
+                    ),
+                    end=Position(
+                        line=change.range.end.line-val,
+                        character=change.range.start.character,
+                    ),
+                )
+                num = self.remove_code_items_at_rage(doc, tmp_range, (True, False))
                 should_update_diagnostics = should_update_diagnostics or num > 0
 
             change_text_len = len(change.text)
