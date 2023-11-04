@@ -82,7 +82,7 @@ class LanguageToolAnalyser(Analyser):
         for change in changes:
             paragraph = doc.paragraph_at_offset(
                 change.start,
-                min_length=change.length,
+                min_offset=change.start + change.length-1,
                 cleaned=True,
             )
             if paragraph in checked:

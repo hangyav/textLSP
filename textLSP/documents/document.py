@@ -138,7 +138,7 @@ class BaseDocument(Document):
 
         return Interval(start_idx, end_idx-start_idx+1)
 
-    def paragraph_at_offset(self, offset: int, min_length=0, cleaned=False) -> Interval:
+    def paragraph_at_offset(self, offset: int, min_length=0, min_offset=0, cleaned=False) -> Interval:
         """
         returns (start_offset, length)
         """
@@ -169,7 +169,7 @@ class BaseDocument(Document):
             ):
                 end_idx += 1
 
-            if end_idx < len_source-1 and end_idx-start_idx+1 < min_length:
+            if end_idx < len_source-1 and (end_idx-start_idx+1 < min_length or end_idx <= min_offset):
                 end_idx += 1
             else:
                 break
@@ -182,12 +182,12 @@ class BaseDocument(Document):
             return None
         return self.paragraph_at_offset(offset, cleaned=cleaned)
 
-    def paragraphs_at_offset(self, offset: int, min_length=0, cleaned=False) -> List[Interval]:
+    def paragraphs_at_offset(self, offset: int, min_length=0, min_offset=0, cleaned=False) -> List[Interval]:
         res = list()
-        doc_lenght = len(self.cleaned_source if cleaned else self.source)
+        doc_length = len(self.cleaned_source if cleaned else self.source)
         length = 0
 
-        while offset < doc_lenght and (length < min_length or length == 0):
+        while offset < doc_length and (length < min_length or offset <= min_offset or length == 0):
             paragraph = self.paragraph_at_offset(offset, cleaned=cleaned)
             res.append(paragraph)
 

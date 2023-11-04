@@ -150,7 +150,7 @@ class OpenAIAnalyser(Analyser):
         diagnostics = list()
         code_actions = list()
         checked = set()
-        for paragraph in doc.paragraphs_at_offset(0, len(doc.cleaned_source), True):
+        for paragraph in doc.paragraphs_at_offset(0, len(doc.cleaned_source), cleaned=True):
             diags, actions = self._handle_paragraph(doc, paragraph)
             diagnostics.extend(diags)
             code_actions.extend(actions)
@@ -166,7 +166,7 @@ class OpenAIAnalyser(Analyser):
         for change in changes:
             paragraph = doc.paragraph_at_offset(
                 change.start,
-                min_length=change.length,
+                min_offset=change.start + change.length-1,
                 cleaned=True,
             )
             if paragraph in checked:
