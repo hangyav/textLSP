@@ -127,7 +127,7 @@ class LanguageToolAnalyser(Analyser):
                 end_sent.start-paragraph.start-1 + end_sent.length,
                 True
             )
-            self.remove_code_items_at_rage(doc, pos_range)
+            self.remove_code_items_at_range(doc, pos_range)
 
             diags, actions = self._analyse(
                 doc.text_at_offset(

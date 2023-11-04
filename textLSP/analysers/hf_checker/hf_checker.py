@@ -151,7 +151,7 @@ class HFCheckerAnalyser(Analyser):
                 paragraph.length,
                 True
             )
-            self.remove_code_items_at_rage(doc, pos_range)
+            self.remove_code_items_at_range(doc, pos_range)
 
             diags, actions = self._analyse_lines(
                 doc.text_at_offset(

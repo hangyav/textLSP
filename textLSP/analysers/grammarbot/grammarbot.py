@@ -119,7 +119,7 @@ class GrammarBotAnalyser(Analyser):
                 paragraph.length,
                 True
             )
-            self.remove_code_items_at_rage(doc, pos_range)
+            self.remove_code_items_at_range(doc, pos_range)
 
             paragraph_text = doc.text_at_offset(paragraph.start, paragraph.length)
             text += paragraph_text

@@ -105,7 +105,7 @@ class Analyser():
                         character=change.range.start.character,
                     ),
                 )
-                num = self.remove_code_items_at_rage(doc, tmp_range, (True, False))
+                num = self.remove_code_items_at_range(doc, tmp_range, (True, False))
                 should_update_diagnostics = should_update_diagnostics or num > 0
 
             change_text_len = len(change.text)
@@ -115,7 +115,7 @@ class Analyser():
                 in_line_diff = change.range.start.character - change.range.end.character
                 in_line_diff += change_text_len
                 if in_line_diff != 0:
-                    # in only some edit in a given line, let's shift the items
+                    # if only edits in a given line, let's shift the items
                     # in the line
                     next_pos = Position(
                         line=change.range.start.line+1,
@@ -124,7 +124,7 @@ class Analyser():
 
                     for diag in list(
                         self._diagnostics_dict[doc.uri].irange_values(
-                            minimum=change.range.start,
+                            minimum=change.range.end,
                             maximum=next_pos,
                             inclusive=(True, False)
                         )
@@ -151,7 +151,7 @@ class Analyser():
 
                     for action in list(
                             self._code_actions_dict[doc.uri].irange_values(
-                                minimum=change.range.start,
+                                minimum=change.range.end,
                                 maximum=next_pos,
                                 inclusive=(True, False)
                             )
@@ -384,7 +384,7 @@ class Analyser():
             self._diagnostics_dict[doc.uri].add(diag.range.start, diag)
         self.language_server.publish_stored_diagnostics(doc)
 
-    def remove_code_items_at_rage(self, doc: Document, pos_range: Range, inclusive=(True, True)):
+    def remove_code_items_at_range(self, doc: Document, pos_range: Range, inclusive=(True, True)):
         num = 0
         num += self._diagnostics_dict[doc.uri].remove_between(pos_range, inclusive)
         num += self._code_actions_dict[doc.uri].remove_between(pos_range, inclusive)
