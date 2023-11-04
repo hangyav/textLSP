@@ -533,7 +533,11 @@ class TreeSitterDocument(CleanableDocument):
         old_tree_end_point = capture[-1][0].end_point
 
         while True:
-            nodes = self._query.captures(tree.root_node, start_point=start_point, end_point=end_point)
+            nodes = self._query.captures(
+                tree.root_node,
+                start_point=start_point,
+                end_point=end_point
+            )
 
             if len(nodes) > 0:
                 node = nodes[-1]

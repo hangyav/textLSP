@@ -222,6 +222,69 @@ def test_highlight(src, offset, exp):
         None,
         None,
     ),
+    (
+        # Based on a bug in nvim
+        'This is paragraph one.\n'
+        '\n'
+        'Sentence one. Sentence two.\n'
+        '\n'
+        'Sentence three.\n'
+        '\n'
+        '# Header\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=13),
+                    end=Position(line=2, character=27),
+                ),
+                text=''
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=3, character=0),
+                    end=Position(line=4, character=0),
+                ),
+                text=''
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=3, character=0),
+                    end=Position(line=3, character=15),
+                ),
+                text=''
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=13),
+                    end=Position(line=2, character=13),
+                ),
+                text=''
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=3, character=0),
+                    end=Position(line=4, character=0),
+                ),
+                text=''
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=13),
+                    end=Position(line=2, character=13),
+                ),
+                text=' Sentence two.\n\nSentence three.'
+            ),
+        ],
+        'This is paragraph one.\n'
+        '\n'
+        'Sentence one. Sentence two.\n'
+        '\n'
+        'Sentence three.\n'
+        '\n'
+        'Header\n',
+        None,
+        None,
+    ),
 ])
 def test_edits(content, changes, exp, offset_test, position_test):
     doc = MarkDownDocument('DUMMY_URL', content)

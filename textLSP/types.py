@@ -199,7 +199,10 @@ class OffsetPositionIntervalList():
 
         if self._position_start_character[idx] <= position.character <= self._position_end_character[idx]:
             return idx
-        if position.character < self._position_start_character[idx]:
+        if (
+                position.line < self._position_start_line[idx] or
+                position.character < self._position_start_character[idx]
+           ):
             return None if strict else idx
 
         return None if strict else min(idx+1, length-1)
