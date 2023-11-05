@@ -566,34 +566,35 @@ class TreeSitterDocument(CleanableDocument):
             old_tree_end_point,
     ):
         text_intervals = OffsetPositionIntervalList()
-
-        if start_point == new_end_point:
-            # DELETE
-            # We might select an empty subtree -> extend the range
-            start_point = (
-                start_point[0] if start_point[1] > 0 else start_point[0]-1,
-                start_point[1]-1 if start_point[1] > 0 else 0,
-            )
-
         offset = 0
+        sp = start_point
+        ep = new_end_point
+
         if start_point > old_tree_end_point:
             # edit at the end of the file
-            # need to extend the range to include the last node to avoid getting
-            # a single newline node in node_iter below
+            # need to extend the range to include the last node since there
+            # might be relevant content (e.g. multiple newlines) that was
+            # ignored since it was at the end
             if old_end_point[1] > 0:
                 sp = (old_tree_end_point[0], max(0, old_tree_end_point[1]-1))
             else:
                 sp = (max(0, old_tree_end_point[0]-1), 0)
-            ep = new_end_point
-        else:
-            sp = start_point
-            ep = new_end_point
-        node_iter = self._iterate_text_nodes(
-            self.tree,
-            sp,
-            ep,
-        )
+
+        node_iter = self._iterate_text_nodes(self.tree, sp, ep)
         node = next(node_iter)
+        while node.text == '\n' and node.start_point == (0, 1) and node.end_point == (0, 1):
+            # empty tree is selected
+            assert next(node_iter, None) is None
+            if sp > (0, 0):
+                sp = (max(0, sp[0]-1), 0)
+            else:
+                node.start_point = start_point
+                node.end_point = start_point
+                break
+
+            node_iter = self._iterate_text_nodes(self.tree, sp, ep)
+            node = next(node_iter)
+
         # copy the text intervals up to the start of the change
         for interval_idx in range(len(self._text_intervals)):
             interval = self._text_intervals.get_interval(interval_idx)
