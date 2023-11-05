@@ -598,12 +598,23 @@ class TreeSitterDocument(CleanableDocument):
         # copy the text intervals up to the start of the change
         for interval_idx in range(len(self._text_intervals)):
             interval = self._text_intervals.get_interval(interval_idx)
-            interval_end = (
-                interval.position_range.end.line,
-                interval.position_range.end.character,
-            )
-            if interval_end >= node.start_point:
-                break
+            if interval.value == '\n' and interval.position_range.start == interval.position_range.end:
+                # newline added by parser but not in source
+                interval_end = (interval.position_range.end.line+1, 0)
+                if interval_end >= node.start_point:
+                    # FIXME This is very messy. Handling these dummy newlines
+                    # should be refactored.
+                    interval.value = ' '
+                    offset += len(interval.value)
+                    text_intervals.add_interval(interval)
+                    break
+            else:
+                interval_end = (
+                    interval.position_range.end.line,
+                    interval.position_range.end.character,
+                )
+                if interval_end >= node.start_point:
+                    break
 
             offset += len(interval.value)
             text_intervals.add_interval(interval)
