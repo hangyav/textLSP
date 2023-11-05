@@ -305,6 +305,43 @@ def test_highlight(src, offset, exp):
         None,
         None,
     ),
+    (
+        'This is paragraph one.\n'
+        '\n'
+        '\n'
+        '\n'
+        'Sentence one. Sentence two.\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=0),
+                    end=Position(line=2, character=0)
+                ),
+                text='A'
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=1),
+                    end=Position(line=2, character=1)
+                ),
+                text='s'
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=2),
+                    end=Position(line=2, character=2)
+                ),
+                text='d'
+            ),
+        ],
+        'This is paragraph one.\n'
+        '\n'
+        'Asd\n'
+        '\n'
+        'Sentence one. Sentence two.\n',
+        None,
+        None,
+    ),
 ])
 def test_edits(content, changes, exp, offset_test, position_test):
     doc = MarkDownDocument('DUMMY_URL', content)

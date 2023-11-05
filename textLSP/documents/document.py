@@ -640,6 +640,8 @@ class TreeSitterDocument(CleanableDocument):
             # we are actully at the end of the file so add the final newline
             text_intervals.add_interval_values(*tmp_intvals[-1])
         else:
+            row_diff = new_end_point[0] - old_end_point[0]
+            col_diff = text_bytes - (end_col - start_col)
             for interval_idx in range(last_idx, len(self._text_intervals)):
                 interval = self._text_intervals.get_interval(interval_idx)
                 if (
@@ -649,30 +651,34 @@ class TreeSitterDocument(CleanableDocument):
                 ):
                     continue
                 node_len = len(interval.value)
-                # FIXME should not calculate for each but once for all after edit
-                # and separately for those which are affected by the edit, do we have those?
                 if interval.position_range.start.line > end_line:
-                    tmp = new_end_point[0] - old_end_point[0]
-                    start_line_offset = tmp
+                    start_line_offset = row_diff
                     start_char_offset = 0
-                    end_line_offset = tmp
+                    end_line_offset = row_diff
                     end_char_offset = 0
                 elif (interval.position_range.start.line == end_line
                       and interval.position_range.start.character >= end_col):
-                    row_tmp = new_end_point[0] - old_end_point[0]
-                    tmp = text_bytes - (end_col - start_col)
-                    start_line_offset = row_tmp
-                    start_char_offset = tmp
-                    end_line_offset = row_tmp
+                    start_line_offset = row_diff
+                    start_char_offset = col_diff
+                    end_line_offset = row_diff
                     if interval.position_range.end.line > interval.position_range.start.line:
                         end_char_offset = 0
                     else:
-                        end_char_offset = tmp
+                        end_char_offset = col_diff
                 else:
-                    start_line_offset = 0
-                    start_char_offset = 0
-                    end_line_offset = 0
-                    end_char_offset = 0
+                    # These are the special newlines which are not in the source
+                    # but added by the parser to separate paragraphs
+                    assert (interval.value == '\n' and interval.position_range.start ==
+                            interval.position_range.end)
+                    last_interval_range = text_intervals.get_interval(-1).position_range
+                    interval_range = interval.position_range
+                    # we need to set start and end position to the same value
+                    # which is the same line as the last item in text_intervals
+                    # and one column to the right
+                    end_line_offset = last_interval_range.end.line - interval_range.end.line
+                    start_line_offset = interval_range.end.line - interval_range.start.line + end_line_offset
+                    end_char_offset = last_interval_range.end.character - interval_range.end.character + 1
+                    start_char_offset = interval_range.end.character - interval_range.start.character + end_char_offset
 
                 text_intervals.add_interval_values(
                     offset,

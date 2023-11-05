@@ -185,7 +185,7 @@ def test_line_shifts(text, edit, exp, json_converter, langtool_ls_onsave):
     ret = done.wait(1)
     done.clear()
 
-    # no diagnostics notification of none has changed
+    # no diagnostics notification if none has changed
     assert ret == edit[2]
     if edit[2]:
         assert len(diag_lst) == 2
@@ -405,6 +405,101 @@ def test_diagnostics_bug2(json_converter, langtool_ls_onsave):
         Range(
             start=Position(line=3, character=9),
             end=Position(line=3, character=13),
+        ),
+    ]
+    res_lst = results[-1]['diagnostics']
+    assert len(res_lst) == len(exp_lst)
+    for exp, res in zip(exp_lst, res_lst):
+        assert res['range'] == json_converter.unstructure(exp)
+
+
+def test_diagnostics_bug3(json_converter, langtool_ls_onsave):
+    text = ('Thiiiis is paragraph one.\n'
+            '\n'
+            '\n'
+            '\n'
+            'Sentence one. Sentence two.\n')
+
+    done = Event()
+    results = list()
+
+    langtool_ls_onsave.set_notification_callback(
+        session.PUBLISH_DIAGNOSTICS,
+        utils.get_notification_handler(
+            event=done,
+            results=results
+        ),
+    )
+
+    open_params = DidOpenTextDocumentParams(
+        TextDocumentItem(
+            uri='dummy.md',
+            language_id='md',
+            version=1,
+            text=text,
+        )
+    )
+
+    langtool_ls_onsave.notify_did_open(
+        json_converter.unstructure(open_params)
+    )
+    assert done.wait(30)
+    done.clear()
+
+    change_params = DidChangeTextDocumentParams(
+        text_document=VersionedTextDocumentIdentifier(
+            version=1,
+            uri='dummy.md',
+        ),
+        content_changes=[
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=0),
+                    end=Position(line=2, character=0)
+                ),
+                text='A'
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=1),
+                    end=Position(line=2, character=1)
+                ),
+                text='s'
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=2),
+                    end=Position(line=2, character=2)
+                ),
+                text='d'
+            ),
+        ]
+    )
+    langtool_ls_onsave.notify_did_change(
+        json_converter.unstructure(change_params)
+    )
+    assert not done.wait(10)
+    done.clear()
+
+    save_params = DidSaveTextDocumentParams(
+        text_document=TextDocumentIdentifier(
+            'dummy.md'
+        )
+    )
+    langtool_ls_onsave.notify_did_save(
+        json_converter.unstructure(save_params)
+    )
+    assert done.wait(30)
+    done.clear()
+
+    exp_lst = [
+        Range(
+            start=Position(line=0, character=0),
+            end=Position(line=0, character=7),
+        ),
+        Range(
+            start=Position(line=2, character=0),
+            end=Position(line=2, character=3),
         ),
     ]
     res_lst = results[-1]['diagnostics']
