@@ -265,7 +265,10 @@ class OpenAIAnalyser(Analyser):
         if params.range.start != params.range.end:
             return res
 
-        line = doc.lines[params.range.start.line].strip()
+        if len(doc.lines) > 0:
+            line = doc.lines[params.range.start.line].strip()
+        else:
+            line = ''
         magic = self.config.get(self.CONFIGURATION_PROMPT_MAGIC, self.SETTINGS_DEFAULT_PROMPT_MAGIC)
         if magic in line:
             if res is None:
