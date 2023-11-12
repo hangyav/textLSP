@@ -133,7 +133,7 @@ def test_highlight(src, offset, exp):
         None,
     ),
     (
-        # Based on a bug in nvim
+        # Based on a bug, as done by in nvim
         'This is a sentence. This is another.\n'
         '\n'
         'This is a new paragraph.\n',
@@ -372,6 +372,129 @@ def test_highlight(src, offset, exp):
         'This is paragraph one. A\n'
         '\n'
         'Sentence one. Sentence two.\n',
+        None,
+        None,
+    ),
+    (
+        'This is a sentence.\n'
+        '\n'
+        'Header\n'
+        'This is a sentence.\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=0),
+                    end=Position(line=2, character=0)
+                ),
+                text='#'
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=1),
+                    end=Position(line=2, character=1)
+                ),
+                text=' '
+            ),
+        ],
+        'This is a sentence.\n'
+        '\n'
+        'Header\n'
+        '\n'
+        'This is a sentence.\n',
+        None,
+        None,
+    ),
+    (
+        'Header\n'
+        'This is a sentence.\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=0, character=0),
+                    end=Position(line=0, character=0)
+                ),
+                text='#'
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=0, character=1),
+                    end=Position(line=0, character=1)
+                ),
+                text=' '
+            ),
+        ],
+        'Header\n'
+        '\n'
+        'This is a sentence.\n',
+        None,
+        None,
+    ),
+    (
+        'This is a sentence.\n'
+        '\n'
+        '# Header\n'
+        'This is a sentence.\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=1),
+                    end=Position(line=2, character=2)
+                ),
+                text=''
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=0),
+                    end=Position(line=2, character=1)
+                ),
+                text=''
+            ),
+        ],
+        'This is a sentence.\n'
+        '\n'
+        'Header This is a sentence.\n',
+        None,
+        None,
+    ),
+    (
+        'This is a sentence.\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=0, character=0),
+                    end=Position(line=1, character=0)
+                ),
+                text=''
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=0, character=0),
+                    end=Position(line=0, character=0)
+                ),
+                text='This is a sentence.'
+            ),
+        ],
+        'This is a sentence.\n',
+        None,
+        None,
+    ),
+    (
+        '* This is point one.\n'
+        '* This is point two.\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=0, character=0),
+                    end=Position(line=0, character=0)
+                ),
+                text='* This is point one.\n'
+            ),
+        ],
+        'This is point one.\n'
+        '\n'
+        'This is point one.\n'
+        '\n'
+        'This is point two.\n',
         None,
         None,
     ),

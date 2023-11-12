@@ -441,23 +441,28 @@ class TreeSitterDocument(CleanableDocument):
         start_col = change_range.start.character
         end_line = change_range.end.line
         end_col = change_range.end.character
-        if end_line >= len(lines):
-            # this could happen eg when the last line is deleted
-            end_line = len(lines) - 1
-            end_col = len(lines[end_line]) - 1
+        len_lines = len(lines)
+        if len_lines == 0:
+            start_byte = 0
+            end_byte = 0
+        else:
+            if end_line >= len(lines):
+                # this could happen eg when the last line is deleted
+                end_line = len(lines) - 1
+                end_col = len(lines[end_line]) - 1
 
-        start_byte = len(bytes(
-            ''.join(
-                lines[:start_line] + [lines[start_line][:start_col+1]]
-            ),
-            'utf-8',
-        ))
-        end_byte = len(bytes(
-            ''.join(
-                lines[:end_line] + [lines[end_line][:end_col+1]]
-            ),
-            'utf-8',
-        ))
+            start_byte = len(bytes(
+                ''.join(
+                    lines[:start_line] + [lines[start_line][:start_col]]
+                ),
+                'utf-8',
+            ))
+            end_byte = len(bytes(
+                ''.join(
+                    lines[:end_line] + [lines[end_line][:end_col]]
+                ),
+                'utf-8',
+            ))
         text_bytes = len(bytes(change.text, 'utf-8'))
 
         if end_byte - start_byte == 0:
@@ -532,6 +537,9 @@ class TreeSitterDocument(CleanableDocument):
 
         old_tree_end_point = capture[-1][0].end_point
 
+        if start_point == end_point:
+            # avoid empty interval
+            end_point = (end_point[0], end_point[1]+1)
         while True:
             nodes = self._query.captures(
                 tree.root_node,
@@ -558,6 +566,9 @@ class TreeSitterDocument(CleanableDocument):
             start_col,
             end_line,
             end_col,
+            start_byte,
+            old_end_byte,
+            new_end_byte,
             start_point,
             old_end_point,
             new_end_point,
@@ -568,7 +579,18 @@ class TreeSitterDocument(CleanableDocument):
         text_intervals = OffsetPositionIntervalList()
         offset = 0
         sp = start_point
-        ep = new_end_point
+        if new_end_byte > old_end_byte:
+            # the node could have been broken into multiple nodes
+            # we parse all
+            ep = max(
+                new_end_point,
+                (
+                    old_last_edited_node.end.line,
+                    old_last_edited_node.end.character
+                )
+            )
+        else:
+            ep = new_end_point
 
         if start_point > old_tree_end_point:
             # edit at the end of the file
@@ -651,6 +673,14 @@ class TreeSitterDocument(CleanableDocument):
             # we are actully at the end of the file so add the final newline
             text_intervals.add_interval_values(*tmp_intvals[-1])
         else:
+            while last_idx > 0:
+                interval = self._text_intervals.get_interval(last_idx-1)
+                if (interval.value != '\n' or interval.position_range.start !=
+                        interval.position_range.end):
+                    # not dummy newline
+                    break
+                last_idx -= 1
+
             row_diff = new_end_point[0] - old_end_point[0]
             col_diff = text_bytes - (end_col - start_col)
             for interval_idx in range(last_idx, len(self._text_intervals)):
@@ -757,6 +787,9 @@ class TreeSitterDocument(CleanableDocument):
                 start_col,
                 end_line,
                 end_col,
+                start_byte,
+                old_end_byte,
+                new_end_byte,
                 start_point,
                 old_end_point,
                 new_end_point,

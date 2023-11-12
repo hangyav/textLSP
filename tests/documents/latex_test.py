@@ -611,7 +611,7 @@ def test_change_tracker(content, edits, exp):
     assert tracker.get_changes() == exp
 
 
-@pytest.mark.parametrize('content,change,exp,offset_test,position_test', [
+@pytest.mark.parametrize('content,changes,exp,offset_test,position_test', [
     (
         '\\documentclass[11pt]{article}\n'
         '\\begin{document}\n'
@@ -621,20 +621,22 @@ def test_change_tracker(content, edits, exp):
         'This is a sentence.\n'*2 +
         '\n'
         '\\end{document}',
-        TextDocumentContentChangeEvent_Type1(
-            # add 'o' to Introduction
-            range=Range(
-                start=Position(
-                    line=3,
-                    character=13,
+        [
+            TextDocumentContentChangeEvent_Type1(
+                # add 'o' to Introduction
+                range=Range(
+                    start=Position(
+                        line=3,
+                        character=13,
+                    ),
+                    end=Position(
+                        line=3,
+                        character=13,
+                    ),
                 ),
-                end=Position(
-                    line=3,
-                    character=13,
-                ),
+                text='o',
             ),
-            text='o',
-        ),
+        ],
         'Introoduction\n'
         '\n' +
         ' '.join(['This is a sentence.']*2) +
@@ -651,20 +653,22 @@ def test_change_tracker(content, edits, exp):
         'This is a sentence.\n'*2 +
         '\n'
         '\\end{document}',
-        TextDocumentContentChangeEvent_Type1(
-            # delete 'o' from Introduction
-            range=Range(
-                start=Position(
-                    line=3,
-                    character=13,
+        [
+            TextDocumentContentChangeEvent_Type1(
+                # delete 'o' from Introduction
+                range=Range(
+                    start=Position(
+                        line=3,
+                        character=13,
+                    ),
+                    end=Position(
+                        line=3,
+                        character=14,
+                    ),
                 ),
-                end=Position(
-                    line=3,
-                    character=14,
-                ),
+                text='',
             ),
-            text='',
-        ),
+        ],
         'Intrduction\n'
         '\n' +
         ' '.join(['This is a sentence.']*2) +
@@ -688,20 +692,22 @@ def test_change_tracker(content, edits, exp):
         '\n'
         'A final sentence.\n'
         '\\end{document}',
-        TextDocumentContentChangeEvent_Type1(
-            # replace the word initial
-            range=Range(
-                start=Position(
-                    line=5,
-                    character=3,
+        [
+            TextDocumentContentChangeEvent_Type1(
+                # replace the word initial
+                range=Range(
+                    start=Position(
+                        line=5,
+                        character=3,
+                    ),
+                    end=Position(
+                        line=5,
+                        character=10,
+                    ),
                 ),
-                end=Position(
-                    line=5,
-                    character=10,
-                ),
+                text='\n\naaaaaaa',
             ),
-            text='\n\naaaaaaa',
-        ),
+        ],
         'Introduction\n'
         '\n'
         'An\n'
@@ -740,19 +746,21 @@ def test_change_tracker(content, edits, exp):
         'This is a sentence. \\section{Inline} FooBar\n'
         '\n'
         '\\end{document}',
-        TextDocumentContentChangeEvent_Type1(
-            range=Range(
-                start=Position(
-                    line=5,
-                    character=2,
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=5,
+                        character=2,
+                    ),
+                    end=Position(
+                        line=5,
+                        character=2,
+                    ),
                 ),
-                end=Position(
-                    line=5,
-                    character=2,
-                ),
+                text='oooooo',
             ),
-            text='oooooo',
-        ),
+        ],
         'Introduction\n'
         '\n'
         'Thoooooois is a sentence.\n'
@@ -778,19 +786,21 @@ def test_change_tracker(content, edits, exp):
         'This is a sentence.\n'
         '\n'
         '\\end{document}',
-        TextDocumentContentChangeEvent_Type1(
-            range=Range(
-                start=Position(
-                    line=6,
-                    character=0,
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=6,
+                        character=0,
+                    ),
+                    end=Position(
+                        line=6,
+                        character=0,
+                    ),
                 ),
-                end=Position(
-                    line=6,
-                    character=0,
-                ),
+                text='o',
             ),
-            text='o',
-        ),
+        ],
         'Introduction\n'
         '\n' +
         'This is a sentence. o\n',
@@ -809,19 +819,21 @@ def test_change_tracker(content, edits, exp):
         'This is a sentence.\n'
         '\n'
         '\\end{document}',
-        TextDocumentContentChangeEvent_Type1(
-            range=Range(
-                start=Position(
-                    line=2,
-                    character=0,
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=2,
+                        character=0,
+                    ),
+                    end=Position(
+                        line=2,
+                        character=0,
+                    ),
                 ),
-                end=Position(
-                    line=2,
-                    character=0,
-                ),
+                text='o',
             ),
-            text='o',
-        ),
+        ],
         'o\n'
         '\n'
         'Introduction\n'
@@ -839,19 +851,21 @@ def test_change_tracker(content, edits, exp):
         'This is a sentence.\n'
         '\n'
         '\\end{document}',
-        TextDocumentContentChangeEvent_Type1(
-            range=Range(
-                start=Position(
-                    line=2,
-                    character=0,
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=2,
+                        character=0,
+                    ),
+                    end=Position(
+                        line=3,
+                        character=0,
+                    ),
                 ),
-                end=Position(
-                    line=3,
-                    character=0,
-                ),
+                text='',
             ),
-            text='',
-        ),
+        ],
         'Introduction\n'
         '\n' +
         'This is a sentence.\n',
@@ -880,20 +894,22 @@ def test_change_tracker(content, edits, exp):
         'This is a sentence.\n'
         '\n'
         '\\end{document}',
-        TextDocumentContentChangeEvent_Type1(
-            # delete last character: '.'
-            range=Range(
-                start=Position(
-                    line=5,
-                    character=18,
+        [
+            TextDocumentContentChangeEvent_Type1(
+                # delete last character: '.'
+                range=Range(
+                    start=Position(
+                        line=5,
+                        character=18,
+                    ),
+                    end=Position(
+                        line=5,
+                        character=19,
+                    ),
                 ),
-                end=Position(
-                    line=5,
-                    character=19,
-                ),
+                text='',
             ),
-            text='',
-        ),
+        ],
         'Introduction\n'
         '\n' +
         'This is a sentence\n',
@@ -910,20 +926,22 @@ def test_change_tracker(content, edits, exp):
         '\n'
         '\\end{document}\n'
         '\n',
-        TextDocumentContentChangeEvent_Type1(
-            # delete last character: '.'
-            range=Range(
-                start=Position(
-                    line=8,
-                    character=0,
+        [
+            TextDocumentContentChangeEvent_Type1(
+                # delete last character: '.'
+                range=Range(
+                    start=Position(
+                        line=8,
+                        character=0,
+                    ),
+                    end=Position(
+                        line=9,
+                        character=0,
+                    ),
                 ),
-                end=Position(
-                    line=9,
-                    character=0,
-                ),
+                text='',
             ),
-            text='',
-        ),
+        ],
         'Introduction\n'
         '\n' +
         'This is a sentence.\n',
@@ -938,19 +956,21 @@ def test_change_tracker(content, edits, exp):
         '\n'
         'This is a sentence.\n'
         '\n',
-        TextDocumentContentChangeEvent_Type1(
-            range=Range(
-                start=Position(
-                    line=6,
-                    character=0,
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=6,
+                        character=0,
+                    ),
+                    end=Position(
+                        line=7,
+                        character=0,
+                    ),
                 ),
-                end=Position(
-                    line=7,
-                    character=0,
-                ),
+                text='\n\\end{document}\n',
             ),
-            text='\n\\end{document}\n',
-        ),
+        ],
         'Introduction\n'
         '\n' +
         'This is a sentence.\n',
@@ -965,19 +985,21 @@ def test_change_tracker(content, edits, exp):
         'This is a sentence.\n'
         '\n'
         '\\end{document}',
-        TextDocumentContentChangeEvent_Type1(
-            range=Range(
-                start=Position(
-                    line=1,
-                    character=16,
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=1,
+                        character=16,
+                    ),
+                    end=Position(
+                        line=2,
+                        character=0,
+                    ),
                 ),
-                end=Position(
-                    line=2,
-                    character=0,
-                ),
+                text='\no\n',
             ),
-            text='\no\n',
-        ),
+        ],
         'o\n'
         '\n'
         'Introduction\n'
@@ -986,12 +1008,57 @@ def test_change_tracker(content, edits, exp):
         None,
         None,
     ),
+    (
+        '\\documentclass[11pt]{article}\n'
+        '\\begin{document}\n'
+        'A sentence.\n'
+        'Introduction\n'
+        'This is a sentence.\n'
+        '\n'
+        '\\end{document}',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=3,
+                        character=0,
+                    ),
+                    end=Position(
+                        line=3,
+                        character=0,
+                    ),
+                ),
+                text='\\section{',
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(
+                        line=3,
+                        character=21,
+                    ),
+                    end=Position(
+                        line=3,
+                        character=21,
+                    ),
+                ),
+                text='}',
+            ),
+        ],
+        'A sentence.\n'
+        '\n'
+        'Introduction\n'
+        '\n' +
+        'This is a sentence.\n',
+        None,
+        None,
+    ),
 ])
-def test_edits(content, change, exp, offset_test, position_test):
+def test_edits(content, changes, exp, offset_test, position_test):
     doc = LatexDocument('DUMMY_URL', content)
     doc.cleaned_source
     start = time.time()
-    doc.apply_change(change)
+    for change in changes:
+        doc.apply_change(change)
     assert doc.cleaned_source == exp
     logging.warning(time.time() - start)
 
