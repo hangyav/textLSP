@@ -19,6 +19,7 @@ from tree_sitter import Language, Parser, Tree, Node
 
 from ..utils import get_class, synchronized, git_clone, get_user_cache
 from ..types import (
+    OffsetPositionInterval,
     OffsetPositionIntervalList,
     Interval
 )
@@ -560,24 +561,14 @@ class TreeSitterDocument(CleanableDocument):
                 end=Position(*node[0].end_point)
             ), old_tree_end_point
 
-    def _build_updated_text_intervals(
+    def _get_node_and_iterator_for_edit(
             self,
-            start_line,
-            start_col,
-            end_line,
-            end_col,
-            start_byte,
-            old_end_byte,
-            new_end_byte,
             start_point,
             old_end_point,
             new_end_point,
-            text_bytes,
             last_changed_point,
             old_tree_end_point,
     ):
-        text_intervals = OffsetPositionIntervalList()
-        offset = 0
         sp = start_point
         # last_changed_point is needed to handle subtrees being broken into
         # multiple ones
@@ -608,7 +599,13 @@ class TreeSitterDocument(CleanableDocument):
             node_iter = self._iterate_text_nodes(self.tree, sp, ep)
             node = next(node_iter)
 
-        # copy the text intervals up to the start of the change
+        return node, chain([node], node_iter)
+
+    def _get_intervals_before_edit(
+            self,
+            node,
+    ):
+        # offset = 0
         for interval_idx in range(len(self._text_intervals)):
             interval = self._text_intervals.get_interval(interval_idx)
             if interval.value == '\n' and interval.position_range.start == interval.position_range.end:
@@ -618,8 +615,9 @@ class TreeSitterDocument(CleanableDocument):
                     # FIXME This is very messy. Handling these dummy newlines
                     # should be refactored.
                     interval.value = ' '
-                    offset += len(interval.value)
-                    text_intervals.add_interval(interval)
+                    # offset += len(interval.value)
+                    # text_intervals.add_interval(interval)
+                    yield interval
                     break
             else:
                 interval_end = (
@@ -629,39 +627,52 @@ class TreeSitterDocument(CleanableDocument):
                 if interval_end >= node.start_point:
                     break
 
-            offset += len(interval.value)
-            text_intervals.add_interval(interval)
+            # offset += len(interval.value)
+            # text_intervals.add_interval(interval)
+            yield interval
 
-        # handle the nodes that were in the edited subtree
+    def _get_edited_intervals_and_last_node(
+            self,
+            node_iter,
+            offset,
+    ):
         tmp_intvals = list()
         last_new_node = None
         tmp_node = None
-        for node in chain([node], node_iter):
+        for node in node_iter:
             node_len = len(node)
-            tmp_intvals.append((
-                    offset,
-                    offset+node_len-1,
-                    node.start_point[0],
-                    node.start_point[1],
-                    node.end_point[0],
-                    node.end_point[1],
-                    node.text,
-            ))
+            tmp_intvals.append(
+                OffsetPositionInterval(
+                    offset_interval=Interval(
+                        start=offset,
+                        length=node_len
+                    ),
+                    position_range=Range(
+                        start=Position(
+                            line=node.start_point[0],
+                            character=node.start_point[1],
+                        ),
+                        end=Position(
+                            line=node.end_point[0],
+                            character=node.end_point[1],
+                        ),
+                    ),
+                    value=node.text,
+                )
+            )
             offset += node_len
             last_new_node = tmp_node
             tmp_node = node
 
-        if last_new_node is None:
-            return None
+        return tmp_intvals, last_new_node
 
-        for interval in tmp_intvals[:-1]:
-            # there's always a newline return at the end of the file which
-            # is not needed if we are not really at the end of the file yet
-            text_intervals.add_interval_values(*interval)
-        offset -= len(tmp_intvals[-1][6])
-
-        # add remaining intervals shifted
-        last_new_end_point = last_new_node.end_point
+    def _get_idx_after_edited_tree(
+        self,
+        old_end_point,
+        new_end_point,
+        last_new_end_point,
+        last_changed_point
+    ):
         row_diff = new_end_point[0] - old_end_point[0]
         if last_new_end_point[0] < new_end_point[0]:
             # parse ended before the edit, happens when non parseable
@@ -683,7 +694,7 @@ class TreeSitterDocument(CleanableDocument):
             # the parse ended in the line of the edit
             last_new_end_point = (
                 last_new_end_point[0],
-                last_new_end_point[1] - (new_end_point[1] - old_end_point[1]) + 1
+                last_new_end_point[1] - (new_end_point[1] - old_end_point[1])+1
             )
         elif row_diff > 0:
             # the edit was in the line of the last node which is now
@@ -707,68 +718,153 @@ class TreeSitterDocument(CleanableDocument):
             ),
             strict=False,
         )
+        return last_idx
+
+    def _handle_intervals_after_edit_shifted(
+            self,
+            last_idx,
+            start_col,
+            end_line,
+            end_col,
+            old_end_point,
+            new_end_point,
+            text_bytes,
+            offset,
+            text_intervals,
+    ):
+        while last_idx > 0:
+            interval = self._text_intervals.get_interval(last_idx-1)
+            if (interval.value != '\n' or interval.position_range.start !=
+                    interval.position_range.end):
+                # not dummy newline
+                break
+            last_idx -= 1
+
+        row_diff = new_end_point[0] - old_end_point[0]
+        col_diff = text_bytes - (end_col - start_col)
+        for interval_idx in range(last_idx, len(self._text_intervals)):
+            interval = self._text_intervals.get_interval(interval_idx)
+            if (
+                len(text_intervals) == 0
+                and interval.value.count('\n') > 0
+                and interval.value.strip() == ''
+            ):
+                continue
+            node_len = len(interval.value)
+            if interval.position_range.start.line > end_line:
+                start_line_offset = row_diff
+                start_char_offset = 0
+                end_line_offset = row_diff
+                end_char_offset = 0
+            elif (interval.position_range.start.line == end_line
+                  and interval.position_range.start.character >= end_col):
+                start_line_offset = row_diff
+                start_char_offset = col_diff
+                end_line_offset = row_diff
+                if interval.position_range.end.line > interval.position_range.start.line:
+                    end_char_offset = 0
+                else:
+                    end_char_offset = col_diff
+            else:
+                # These are the special newlines which are not in the source
+                # but added by the parser to separate paragraphs
+                assert (interval.value == '\n' and interval.position_range.start ==
+                        interval.position_range.end)
+                last_interval_range = text_intervals.get_interval(-1).position_range
+                interval_range = interval.position_range
+                # we need to set start and end position to the same value
+                # which is the same line as the last item in text_intervals
+                # and one column to the right
+                end_line_offset = last_interval_range.end.line - interval_range.end.line
+                start_line_offset = interval_range.end.line - interval_range.start.line + end_line_offset
+                end_char_offset = last_interval_range.end.character - interval_range.end.character + 1
+                start_char_offset = interval_range.end.character - interval_range.start.character + end_char_offset
+
+            text_intervals.add_interval_values(
+                offset,
+                offset+node_len-1,
+                interval.position_range.start.line + start_line_offset,
+                interval.position_range.start.character + start_char_offset,
+                interval.position_range.end.line + end_line_offset,
+                interval.position_range.end.character + end_char_offset,
+                interval.value,
+            )
+            offset += node_len
+
+    def _build_updated_text_intervals(
+            self,
+            start_line,
+            start_col,
+            end_line,
+            end_col,
+            start_byte,
+            old_end_byte,
+            new_end_byte,
+            start_point,
+            old_end_point,
+            new_end_point,
+            text_bytes,
+            last_changed_point,
+            old_tree_end_point,
+    ):
+        text_intervals = OffsetPositionIntervalList()
+
+        # get first edited node and iterator for all edited nodes
+        node, node_iter = self._get_node_and_iterator_for_edit(
+            start_point,
+            old_end_point,
+            new_end_point,
+            last_changed_point,
+            old_tree_end_point,
+        )
+
+        # copy the text intervals up to the start of the change
+        for interval in self._get_intervals_before_edit(node):
+            text_intervals.add_interval(interval)
+
+        if len(text_intervals) > 0:
+            offset = interval.offset_interval.start + interval.offset_interval.length
+        else:
+            offset = 0
+
+        # handle the nodes that were in the edited subtree
+        new_intervals, last_new_node = self._get_edited_intervals_and_last_node(
+            node_iter,
+            offset,
+        )
+        if last_new_node is None:
+            return None
+
+        for interval in new_intervals[:-1]:
+            # there's always a newline return at the end of the file which
+            # is not needed if we are not really at the end of the file yet
+            # text_intervals.add_interval_values(*interval)
+            text_intervals.add_interval(interval)
+        offset = interval.offset_interval.start + interval.offset_interval.length
+
+        # add remaining intervals shifted
+        last_new_end_point = last_new_node.end_point
+        last_idx = self._get_idx_after_edited_tree(
+            old_end_point,
+            new_end_point,
+            last_new_end_point,
+            last_changed_point
+        )
         if last_idx+1 >= len(self._text_intervals):
             # we are actully at the end of the file so add the final newline
-            text_intervals.add_interval_values(*tmp_intvals[-1])
+            text_intervals.add_interval(new_intervals[-1])
         else:
-            while last_idx > 0:
-                interval = self._text_intervals.get_interval(last_idx-1)
-                if (interval.value != '\n' or interval.position_range.start !=
-                        interval.position_range.end):
-                    # not dummy newline
-                    break
-                last_idx -= 1
-
-            row_diff = new_end_point[0] - old_end_point[0]
-            col_diff = text_bytes - (end_col - start_col)
-            for interval_idx in range(last_idx, len(self._text_intervals)):
-                interval = self._text_intervals.get_interval(interval_idx)
-                if (
-                    len(text_intervals) == 0
-                    and interval.value.count('\n') > 0
-                    and interval.value.strip() == ''
-                ):
-                    continue
-                node_len = len(interval.value)
-                if interval.position_range.start.line > end_line:
-                    start_line_offset = row_diff
-                    start_char_offset = 0
-                    end_line_offset = row_diff
-                    end_char_offset = 0
-                elif (interval.position_range.start.line == end_line
-                      and interval.position_range.start.character >= end_col):
-                    start_line_offset = row_diff
-                    start_char_offset = col_diff
-                    end_line_offset = row_diff
-                    if interval.position_range.end.line > interval.position_range.start.line:
-                        end_char_offset = 0
-                    else:
-                        end_char_offset = col_diff
-                else:
-                    # These are the special newlines which are not in the source
-                    # but added by the parser to separate paragraphs
-                    assert (interval.value == '\n' and interval.position_range.start ==
-                            interval.position_range.end)
-                    last_interval_range = text_intervals.get_interval(-1).position_range
-                    interval_range = interval.position_range
-                    # we need to set start and end position to the same value
-                    # which is the same line as the last item in text_intervals
-                    # and one column to the right
-                    end_line_offset = last_interval_range.end.line - interval_range.end.line
-                    start_line_offset = interval_range.end.line - interval_range.start.line + end_line_offset
-                    end_char_offset = last_interval_range.end.character - interval_range.end.character + 1
-                    start_char_offset = interval_range.end.character - interval_range.start.character + end_char_offset
-
-                text_intervals.add_interval_values(
+            self._handle_intervals_after_edit_shifted(
+                    last_idx,
+                    start_col,
+                    end_line,
+                    end_col,
+                    old_end_point,
+                    new_end_point,
+                    text_bytes,
                     offset,
-                    offset+node_len-1,
-                    interval.position_range.start.line + start_line_offset,
-                    interval.position_range.start.character + start_char_offset,
-                    interval.position_range.end.line + end_line_offset,
-                    interval.position_range.end.character + end_char_offset,
-                    interval.value,
-                )
-                offset += node_len
+                    text_intervals,
+            )
 
         return text_intervals
 
