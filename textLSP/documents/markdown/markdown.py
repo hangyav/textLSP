@@ -81,6 +81,16 @@ class MarkDownDocument(TreeSitterDocument):
         last_sent = None
         new_lines_after = list()
 
+        if start_point == end_point:
+            # FIXME This is a weird issue, it seems that in some cases nothing
+            # is selected if the interval is empty, but not in all cases. See
+            # markdown_text.py test_edits() where first two characters of
+            # '# Header' is removed
+            end_point = (
+                end_point[0],
+                end_point[1] + 1
+            )
+
         for node in self._query.captures(tree.root_node, start_point=start_point, end_point=end_point):
             # Check if we need some newlines after previous elements
             while len(new_lines_after) > 0:
