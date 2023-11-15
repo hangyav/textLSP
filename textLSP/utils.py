@@ -1,9 +1,9 @@
 import sys
 import importlib
 import inspect
-import pkg_resources
 import re
 
+from importlib.metadata import version
 from functools import wraps
 from threading import RLock
 from git import Repo
@@ -72,7 +72,7 @@ def get_textlsp_name():
 
 
 def get_textlsp_version():
-    pkg_resources.require(get_textlsp_name())[0].version
+    return version(get_textlsp_name())
 
 
 def get_user_cache(app_name=None):

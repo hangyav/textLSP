@@ -14,7 +14,8 @@ from lsprotocol.types import (
     TextDocumentContentChangeEvent_Type1,
     TextDocumentContentChangeEvent_Type2,
 )
-from pygls.workspace import Document, position_from_utf16, range_from_utf16
+from pygls.workspace import TextDocument
+from pygls.workspace.position_codec import PositionCodec
 from tree_sitter import Language, Parser, Tree, Node
 
 from ..utils import get_class, synchronized, git_clone, get_user_cache
@@ -26,9 +27,10 @@ from ..types import (
 from .. import documents
 
 logger = logging.getLogger(__name__)
+_codec = PositionCodec()
 
 
-class BaseDocument(Document):
+class BaseDocument(TextDocument):
     def __init__(self, *args, config: Dict = None, **kwargs):
         super().__init__(*args, **kwargs)
         if config is None:
@@ -102,7 +104,7 @@ class BaseDocument(Document):
     def offset_at_position(self, position: Position, cleaned=False) -> int:
         # doesn't really matter
         lines = self.cleaned_lines if cleaned else self.lines
-        pos = position_from_utf16(lines, position)
+        pos = _codec.position_from_client_units(lines, position)
         row, col = pos.line, pos.character
         return col + sum(len(line) for line in lines[:row])
 
@@ -437,7 +439,7 @@ class TreeSitterDocument(CleanableDocument):
     def _get_edit_positions(self, change):
         lines = self.lines
         change_range = change.range
-        change_range = range_from_utf16(lines, change_range)
+        change_range = _codec.range_from_client_units(lines, change_range)
         start_line = change_range.start.line
         start_col = change_range.start.character
         end_line = change_range.end.line
@@ -916,7 +918,7 @@ class TreeSitterDocument(CleanableDocument):
         )
 
         last_changed_point = (0, 0)
-        for change in tree.get_changed_ranges(self.tree):
+        for change in tree.changed_ranges(self.tree):
             last_changed_point = max(last_changed_point, change.end_point)
 
         if old_tree_end_point is not None:
@@ -1068,7 +1070,7 @@ class DocumentTypeFactory():
         version: Optional[int] = None,
         language_id: Optional[str] = None,
         sync_kind=None,
-    ) -> Document:
+    ) -> TextDocument:
         try:
             type = DocumentTypeFactory.get_file_type(language_id)
             cls = get_class(

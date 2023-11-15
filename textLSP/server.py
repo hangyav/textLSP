@@ -47,7 +47,7 @@ class TextLSPLanguageServerProtocol(LanguageServerProtocol):
     @lsp_method(INITIALIZE)
     def lsp_initialize(self, params: InitializeParams) -> InitializeResult:
         result = super().lsp_initialize(params)
-        self.workspace = TextLSPWorkspace.workspace2textlspworkspace(
+        self._workspace = TextLSPWorkspace.workspace2textlspworkspace(
             self.workspace,
             self._server.analyser_handler,
             self._server.settings,

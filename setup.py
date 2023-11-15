@@ -2,9 +2,9 @@ import os
 import sys
 from setuptools import setup, find_packages
 
-if sys.version_info >= (3, 11, 0):
+if sys.version_info >= (3, 12, 0):
     # due to current pytorch limitations
-    print('Required python version <= 3.11.0')
+    print('Required python version <= 3.12.0')
     sys.exit(-1)
 
 
@@ -29,25 +29,25 @@ setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
-    entry_points = {
+    entry_points={
         'console_scripts': ['textlsp=textLSP.cli:main'],
     },
     install_requires=[
-        'pygls==1.0.0',
-        'lsprotocol==2022.0.0a9',
+        'pygls==1.1.2',
+        'lsprotocol==2023.0.0b1',
         'language-tool-python==2.7.1',
-        'tree_sitter==0.20.1',
-        'gitpython==3.1.29',
+        'tree_sitter==0.20.4',
+        'gitpython==3.1.40',
         'appdirs==1.4.4',
-        'torch==1.13.1',
-        'openai==0.26.4',
-        'transformers==4.25.1',
+        'torch==2.1.0',
+        'openai==1.2.4',
+        'transformers==4.35.1',
         'sortedcontainers==2.4.0',
     ],
     extras_require={
         'dev': [
-            'pytest',
-            'python-lsp-jsonrpc',
+            'pytest==7.4.3',
+            'python-lsp-jsonrpc==1.1.2',
         ]
     },
 )
