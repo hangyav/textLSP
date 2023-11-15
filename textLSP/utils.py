@@ -59,8 +59,11 @@ def synchronized(wrapped):
     return _wrapper
 
 
-def git_clone(url, dir):
-    return Repo.clone_from(url=url, to_path=dir)
+def git_clone(url, dir, branch=None):
+    repo = Repo.clone_from(url=url, to_path=dir)
+    if branch is not None:
+        repo.git.checkout(branch)
+    return repo
 
 
 def get_textlsp_name():

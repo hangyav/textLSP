@@ -51,6 +51,7 @@ class MarkDownDocument(TreeSitterDocument):
         super().__init__(
             'markdown',
             'https://github.com/ikatyang/tree-sitter-markdown',
+            'v0.7.1',
             *args,
             **kwargs,
         )

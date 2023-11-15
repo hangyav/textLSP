@@ -40,6 +40,7 @@ class LatexDocument(TreeSitterDocument):
         super().__init__(
             'latex',
             'https://github.com/latex-lsp/tree-sitter-latex',
+            'v0.3.0',
             *args,
             **kwargs,
         )

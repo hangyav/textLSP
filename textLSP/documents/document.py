@@ -327,46 +327,47 @@ class TextNode():
 class TreeSitterDocument(CleanableDocument):
     LIB_PATH_TEMPLATE = '{}/treesitter/{}.so'.format(get_user_cache(), '{}')
 
-    def __init__(self, language_name, grammar_url, *args, **kwargs):
+    def __init__(self, language_name, grammar_url, branch, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._language = self.get_language(language_name, grammar_url)
+        self._language = self.get_language(language_name, grammar_url, branch)
         self._parser = self.get_parser(
             language_name,
             grammar_url,
+            branch,
             self._language
         )
         self._text_intervals = None
 
     @classmethod
-    def build_library(cls, name, url) -> None:
+    def build_library(cls, name, url, branch=None) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
-            git_clone(url, tmpdir)
+            git_clone(url, tmpdir, branch)
             Language.build_library(
                 cls.LIB_PATH_TEMPLATE.format(name),
                 [tmpdir]
             )
 
     @classmethod
-    def get_language(cls, name, url) -> Language:
+    def get_language(cls, name, url, branch=None) -> Language:
         try:
             return Language(
                 cls.LIB_PATH_TEMPLATE.format(name),
                 name,
             )
         except Exception:
-            cls.build_library(name, url)
+            cls.build_library(name, url, branch)
             return Language(
                 cls.LIB_PATH_TEMPLATE.format(name),
                 name,
             )
 
     @classmethod
-    def get_parser(cls, name=None, url=None, language=None) -> Parser:
+    def get_parser(cls, name=None, url=None, branch=None, language=None) -> Parser:
         parser = Parser()
         if language is None:
             assert name is not None
             assert url is not None
-            language = cls.get_language(name, url)
+            language = cls.get_language(name, url, branch)
         parser.set_language(language)
         return parser
 

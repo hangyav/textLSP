@@ -41,6 +41,7 @@ class OrgDocument(TreeSitterDocument):
         super().__init__(
             'org',
             'https://github.com/milisims/tree-sitter-org',
+            'v1.3.1',
             *args,
             **kwargs,
         )
