@@ -498,6 +498,96 @@ def test_highlight(src, offset, exp):
         None,
         None,
     ),
+    (
+        'This is a sentence.\n'
+        'A\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=1, character=1),
+                    end=Position(line=1, character=1)
+                ),
+                text='B'
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=1, character=2),
+                    end=Position(line=1, character=2)
+                ),
+                text=' '
+            ),
+        ],
+        'This is a sentence. AB\n',
+        None,
+        None,
+    ),
+    (
+        'This is a sentence.\n'
+        'A\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=1, character=1),
+                    end=Position(line=1, character=1)
+                ),
+                text=' '
+            ),
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=1, character=2),
+                    end=Position(line=1, character=2)
+                ),
+                text=' '
+            ),
+        ],
+        'This is a sentence. A\n',
+        None,
+        None,
+    ),
+    (
+        'This is a sentence.\n'
+        '\n'
+        '   This will be an unparsed part.\n'
+        '\n'
+        'This is a sentence.\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=0),
+                    end=Position(line=2, character=0)
+                ),
+                text=' '
+            ),
+        ],
+        'This is a sentence.\n'
+        '\n'
+        'This is a sentence.\n',
+        None,
+        None,
+    ),
+    (
+        'This is a sentence.\n'
+        '\n'
+        '    This will be a parsed part.\n'
+        '\n'
+        'This is a sentence.\n',
+        [
+            TextDocumentContentChangeEvent_Type1(
+                range=Range(
+                    start=Position(line=2, character=0),
+                    end=Position(line=2, character=1)
+                ),
+                text=''
+            ),
+        ],
+        'This is a sentence.\n'
+        '\n'
+        'This will be a parsed part.\n'
+        '\n'
+        'This is a sentence.\n',
+        None,
+        None,
+    ),
 ])
 def test_edits(content, changes, exp, offset_test, position_test):
     doc = MarkDownDocument('DUMMY_URL', content)

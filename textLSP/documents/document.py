@@ -530,51 +530,33 @@ class TreeSitterDocument(CleanableDocument):
                 new_end_point,
         )
 
-    def _get_last_node_for_edit(self, tree, start_point, end_point):
-        node = None
-        capture = self._query.captures(
-            tree.root_node,
-        )
-        if len(capture) == 0:
-            return None, None
-
-        old_tree_end_point = capture[-1][0].end_point
-
-        if start_point == end_point:
-            # avoid empty interval
-            end_point = (end_point[0], end_point[1]+1)
-        while True:
-            nodes = self._query.captures(
-                tree.root_node,
-                start_point=start_point,
-                end_point=end_point
-            )
-
-            if len(nodes) > 0:
-                node = nodes[-1]
-                break
-
-            start_point = (start_point[0]-1, 0)
-            if start_point[0] < 0:
-                return None, None
-
-        return Range(
-                start=Position(*node[0].start_point),
-                end=Position(*node[0].end_point)
-            ), old_tree_end_point
-
     def _get_node_and_iterator_for_edit(
             self,
             start_point,
             old_end_point,
             new_end_point,
             last_changed_point,
+            old_tree_first_node_new_end_point,
             old_tree_end_point,
     ):
         sp = start_point
+        if len(self._text_intervals) > 0:
+            old_first_interval_end_point = (
+                self._text_intervals.get_interval(0).position_range.end.line,
+                self._text_intervals.get_interval(0).position_range.end.character
+            )
+        else:
+            old_first_interval_end_point = (0, 0)
+        if start_point < old_first_interval_end_point:
+            # there's new content at the beginning, we need to parse the next
+            # subtree as well, since there are no necesary whitespace tokens in
+            # the current text_intervals
+            tmp_point = old_tree_first_node_new_end_point
+        else:
+            tmp_point = (0, 0)
         # last_changed_point is needed to handle subtrees being broken into
         # multiple ones
-        ep = max(new_end_point, last_changed_point)
+        ep = max(tmp_point, new_end_point, last_changed_point)
 
         if start_point > old_tree_end_point:
             # edit at the end of the file
@@ -672,9 +654,14 @@ class TreeSitterDocument(CleanableDocument):
         self,
         old_end_point,
         new_end_point,
+        text_bytes,
         last_new_end_point,
         last_changed_point
     ):
+        # we take the max since none parseable content could have been
+        # added at the end
+        last_new_end_point = max(last_changed_point, last_new_end_point)
+
         row_diff = new_end_point[0] - old_end_point[0]
         if last_new_end_point[0] < new_end_point[0]:
             # parse ended before the edit, happens when non parseable
@@ -687,16 +674,14 @@ class TreeSitterDocument(CleanableDocument):
             # parse ended in a later line  as the edit, i.e. its
             # position is only affected by line shift
             last_new_end_point = (
-                # last_new_end_point[0] - row_diff,
-                # last_new_end_point[1] + 1
-                max(last_changed_point, last_new_end_point)[0] - row_diff,
-                max(last_changed_point, last_new_end_point)[1] + 1
+                last_new_end_point[0] - row_diff,
+                last_new_end_point[1] + 1
             )
         elif row_diff == 0:
             # the parse ended in the line of the edit
             last_new_end_point = (
                 last_new_end_point[0],
-                last_new_end_point[1] - (new_end_point[1] - old_end_point[1])+1
+                last_new_end_point[1] - (new_end_point[1] - old_end_point[1]) + text_bytes + 1
             )
         elif row_diff > 0:
             # the edit was in the line of the last node which is now
@@ -734,7 +719,7 @@ class TreeSitterDocument(CleanableDocument):
             offset,
             text_intervals,
     ):
-        while last_idx > 0:
+        while last_idx > 1:
             interval = self._text_intervals.get_interval(last_idx-1)
             if (interval.value != '\n' or interval.position_range.start !=
                     interval.position_range.end):
@@ -807,6 +792,7 @@ class TreeSitterDocument(CleanableDocument):
             new_end_point,
             text_bytes,
             last_changed_point,
+            old_tree_first_node_new_end_point,
             old_tree_end_point,
     ):
         text_intervals = OffsetPositionIntervalList()
@@ -817,6 +803,7 @@ class TreeSitterDocument(CleanableDocument):
             old_end_point,
             new_end_point,
             last_changed_point,
+            old_tree_first_node_new_end_point,
             old_tree_end_point,
         )
 
@@ -849,6 +836,7 @@ class TreeSitterDocument(CleanableDocument):
         last_idx = self._get_idx_after_edited_tree(
             old_end_point,
             new_end_point,
+            text_bytes,
             last_new_end_point,
             last_changed_point
         )
@@ -892,15 +880,15 @@ class TreeSitterDocument(CleanableDocument):
         ) = self._get_edit_positions(change)
 
         # bookkeeping for later source cleaning
-        # TODO remove this part
-        (
-            old_last_edited_node,
-            old_tree_end_point
-        ) = self._get_last_node_for_edit(
-            tree,
-            start_point,
-            old_end_point,
+        capture = self._query.captures(
+            tree.root_node,
         )
+        if len(capture) == 0:
+            old_tree_first_node = None
+            old_tree_end_point = None
+        else:
+            old_tree_first_node = capture[0][0]
+            old_tree_end_point = capture[-1][0].end_point
 
         tree.edit(
             start_byte=start_byte,
@@ -917,7 +905,20 @@ class TreeSitterDocument(CleanableDocument):
             tree
         )
 
-        last_changed_point = (0, 0)
+        if old_tree_first_node is not None:
+            old_tree_first_node.edit(
+                start_byte=start_byte,
+                old_end_byte=old_end_byte,
+                new_end_byte=new_end_byte,
+                start_point=start_point,
+                old_end_point=old_end_point,
+                new_end_point=new_end_point,
+            )
+            old_tree_first_node_new_end_point = old_tree_first_node.end_point
+        else:
+            old_tree_first_node_new_end_point = None
+
+        last_changed_point = (-1, -1)
         for change in tree.changed_ranges(self.tree):
             last_changed_point = max(last_changed_point, change.end_point)
 
@@ -936,6 +937,7 @@ class TreeSitterDocument(CleanableDocument):
                 new_end_point,
                 text_bytes,
                 last_changed_point,
+                old_tree_first_node_new_end_point,
                 old_tree_end_point,
             )
 
