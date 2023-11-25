@@ -34,7 +34,7 @@ setup(
     },
     install_requires=[
         'pygls==1.1.2',
-        'lsprotocol==2023.0.0b1',
+        'lsprotocol==2023.0.0',
         'language-tool-python==2.7.1',
         'tree_sitter==0.20.4',
         'gitpython==3.1.40',
