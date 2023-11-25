@@ -39,7 +39,7 @@ setup(
         'tree_sitter==0.20.4',
         'gitpython==3.1.40',
         'appdirs==1.4.4',
-        'torch==2.1.0',
+        'torch==2.1.1',
         'openai==1.2.4',
         'transformers==4.35.1',
         'sortedcontainers==2.4.0',
