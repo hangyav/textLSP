@@ -33,7 +33,7 @@ setup(
         'console_scripts': ['textlsp=textLSP.cli:main'],
     },
     install_requires=[
-        'pygls==1.1.2',
+        'pygls==1.2.0',
         'lsprotocol==2023.0.0b1',
         'language-tool-python==2.7.1',
         'tree_sitter==0.20.4',
