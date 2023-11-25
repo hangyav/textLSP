@@ -143,15 +143,17 @@ class BaseDocument(TextDocument):
 
     def paragraph_at_offset(self, offset: int, min_length=0, min_offset=0, cleaned=False) -> Interval:
         """
+        Returns the last paragraph if offset is over the content length.
         returns (start_offset, length)
         """
-        start_idx = offset
-        end_idx = offset
         source = self.cleaned_source if cleaned else self.source
         len_source = len(source)
 
+        start_idx = offset
         assert start_idx >= 0
-        assert end_idx < len_source
+        if start_idx >= len_source:
+            start_idx = len_source - 1
+        end_idx = start_idx
 
         while (
             start_idx >= 0
