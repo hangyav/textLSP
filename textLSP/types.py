@@ -6,6 +6,7 @@ import uuid
 
 from typing import Optional, Any, List
 from dataclasses import dataclass
+from sortedcontainers import SortedDict
 
 from lsprotocol.types import (
     Position,
@@ -15,6 +16,8 @@ from lsprotocol.types import (
     WorkDoneProgressReport,
     WorkDoneProgressEnd,
 )
+
+from .utils import position_to_tuple
 
 
 TEXT_PASSAGE_PATTERN = re.compile('[.?!] |\\n')
@@ -83,7 +86,7 @@ class OffsetPositionIntervalList():
     def add_interval(self, interval: OffsetPositionInterval):
         self.add_interval_values(
             interval.offset_interval.start,
-            interval.offset_interval.end,
+            interval.offset_interval.start + interval.offset_interval.length - 1,
             interval.position_range.start.line,
             interval.position_range.start.character,
             interval.position_range.end.line,
@@ -196,7 +199,10 @@ class OffsetPositionIntervalList():
 
         if self._position_start_character[idx] <= position.character <= self._position_end_character[idx]:
             return idx
-        if position.character < self._position_start_character[idx]:
+        if (
+                position.line < self._position_start_line[idx] or
+                position.character < self._position_start_character[idx]
+           ):
             return None if strict else idx
 
         return None if strict else min(idx+1, length-1)
@@ -209,6 +215,88 @@ class OffsetPositionIntervalList():
         if idx is None:
             return None
         return self.get_interval(idx)
+
+
+class PositionDict():
+
+    def __init__(self):
+        self._positions = SortedDict()
+
+    def add(self, position: Position, item):
+        position = position_to_tuple(position)
+        self._positions[position] = item
+
+    def get(self, position: Position):
+        position = position_to_tuple(position)
+        return self._positions[position]
+
+    def pop(self, position: Position):
+        position = position_to_tuple(position)
+        return self._positions.popitem(position)
+
+    def update(self, old_position: Position, new_position: Position = None,
+               new_value=None):
+        assert new_position is not None or new_value is not None, ' new_position'
+        ' or new_value should be specified.'
+
+        old_position = position_to_tuple(old_position)
+        new_position = position_to_tuple(new_position)
+        if new_position is None:
+            self._positions[old_position] = new_value
+            return
+
+        if new_value is None:
+            new_value = self._positions.popitem(old_position)
+        else:
+            del self._positions[old_position]
+
+        self._positions[new_position] = new_value
+
+    def remove(self, position: Position):
+        position = position_to_tuple(position)
+        del self._positions[position]
+
+    def remove_from(self, position: Position, inclusive=True):
+        position = position_to_tuple(position)
+        num = 0
+        for key in list(self._positions.irange(
+            minimum=position,
+            inclusive=(inclusive, False)
+        )):
+            del self._positions[key]
+            num += 1
+
+        return num
+
+    def remove_between(self, range: Range, inclusive=(True, True)):
+        minimum = position_to_tuple(range.start)
+        maximum = position_to_tuple(range.end)
+        num = 0
+        for key in list(self._positions.irange(
+            minimum=minimum,
+            maximum=maximum,
+            inclusive=inclusive,
+        )):
+            del self._positions[key]
+            num += 1
+
+        return num
+
+    def irange(self, minimum: Position = None, maximum: Position = None, *args,
+               **kwargs):
+        if minimum is not None:
+            minimum = position_to_tuple(minimum)
+        if maximum is not None:
+            maximum = position_to_tuple(maximum)
+
+        return self._positions.irange(minimum, maximum, *args, **kwargs)
+
+    def irange_values(self, *args, **kwargs):
+        for key in self.irange(*args, **kwargs):
+            yield self._positions[key]
+
+    def __iter__(self):
+        return iter(self._positions.values())
 
 
 @enum.unique

@@ -6,7 +6,7 @@ from lsprotocol.types import (
     TextDocumentContentChangeEvent,
     VersionedTextDocumentIdentifier,
 )
-from pygls.workspace import Workspace, Document
+from pygls.workspace import Workspace, TextDocument
 
 from .documents.document import DocumentTypeFactory
 from .analysers.handler import AnalyserHandler
@@ -21,13 +21,13 @@ class TextLSPWorkspace(Workspace):
         self.analyser_handler = analyser_handler
         self.settings = settings
 
-    def _create_document(
+    def _create_text_document(
         self,
         doc_uri: str,
         source: Optional[str] = None,
         version: Optional[int] = None,
         language_id: Optional[str] = None,
-    ) -> Document:
+    ) -> TextDocument:
         return DocumentTypeFactory.get_document(
             doc_uri=doc_uri,
             config=self.settings,
@@ -59,9 +59,11 @@ class TextLSPWorkspace(Workspace):
 
         self.settings = merge_dicts(self.settings, settings)
 
-    def update_document(self,
-                        text_doc: VersionedTextDocumentIdentifier,
-                        change: TextDocumentContentChangeEvent):
-        doc = self._docs[text_doc.uri]
+    def update_text_document(
+        self,
+        text_doc: VersionedTextDocumentIdentifier,
+        change: TextDocumentContentChangeEvent
+    ):
+        doc = self._text_documents[text_doc.uri]
         self.analyser_handler.update_document(doc, change)
-        super().update_document(text_doc, change)
+        super().update_text_document(text_doc, change)

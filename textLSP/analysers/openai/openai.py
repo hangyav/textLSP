@@ -1,6 +1,6 @@
 import logging
 import openai
-from openai.error import OpenAIError
+from openai import OpenAI, APIError
 
 from typing import List, Tuple, Optional
 from lsprotocol.types import (
@@ -54,19 +54,20 @@ class OpenAIAnalyser(Analyser):
         super().__init__(language_server, config, name)
         if self.CONFIGURATION_API_KEY not in self.config:
             raise ConfigurationError(f'Reqired parameter: {name}.{self.CONFIGURATION_API_KEY}')
-        openai.api_key = self.config[self.CONFIGURATION_API_KEY]
+        self._client = OpenAI(api_key=self.config[self.CONFIGURATION_API_KEY])
 
     def _edit(self, text) -> List[TokenDiff]:
         try:
-            res = openai.Edit.create(
+            # res = openai.Edit.create(
+            res = self._client.edits.create(
                 model=self.config.get(self.CONFIGURATION_EDIT_MODEL, self.SETTINGS_DEFAULT_EDIT_MODEL),
                 instruction=self.config.get(self.CONFIGURATION_EDIT_INSTRUCTION, self.SETTINGS_DEFAULT_EDIT_INSTRUCTION),
                 input=text,
                 temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
             )
             if len(res.choices) > 0:
-                return TokenDiff.token_level_diff(text, res.choices[0]['text'].strip())
-        except OpenAIError as e:
+                return TokenDiff.token_level_diff(text, res.choices[0].text.strip())
+        except APIError as e:
             self.language_server.show_message(
                 str(e),
                 MessageType.Error,
@@ -76,7 +77,7 @@ class OpenAIAnalyser(Analyser):
 
     def _generate(self, text) -> Optional[str]:
         try:
-            res = openai.Completion.create(
+            res = self._client.completions.create(
                 model=self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL),
                 prompt=text,
                 temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
@@ -84,8 +85,8 @@ class OpenAIAnalyser(Analyser):
             )
 
             if len(res.choices) > 0:
-                return res.choices[0]['text'].strip()
-        except OpenAIError as e:
+                return res.choices[0].text.strip()
+        except APIError as e:
             self.language_server.show_message(
                 str(e),
                 MessageType.Error,
@@ -150,7 +151,7 @@ class OpenAIAnalyser(Analyser):
         diagnostics = list()
         code_actions = list()
         checked = set()
-        for paragraph in doc.paragraphs_at_offset(0, len(doc.cleaned_source), True):
+        for paragraph in doc.paragraphs_at_offset(0, len(doc.cleaned_source), cleaned=True):
             diags, actions = self._handle_paragraph(doc, paragraph)
             diagnostics.extend(diags)
             code_actions.extend(actions)
@@ -166,7 +167,7 @@ class OpenAIAnalyser(Analyser):
         for change in changes:
             paragraph = doc.paragraph_at_offset(
                 change.start,
-                min_length=change.length,
+                min_offset=change.start + change.length-1,
                 cleaned=True,
             )
             if paragraph in checked:
@@ -189,7 +190,7 @@ class OpenAIAnalyser(Analyser):
             paragraph.length,
             True
         )
-        self.remove_code_items_at_rage(doc, pos_range)
+        self.remove_code_items_at_range(doc, pos_range)
 
         diags, actions = self._analyse(
             doc.text_at_offset(
@@ -265,7 +266,10 @@ class OpenAIAnalyser(Analyser):
         if params.range.start != params.range.end:
             return res
 
-        line = doc.lines[params.range.start.line].strip()
+        if len(doc.lines) > 0:
+            line = doc.lines[params.range.start.line].strip()
+        else:
+            line = ''
         magic = self.config.get(self.CONFIGURATION_PROMPT_MAGIC, self.SETTINGS_DEFAULT_PROMPT_MAGIC)
         if magic in line:
             if res is None:

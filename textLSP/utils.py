@@ -1,13 +1,14 @@
 import sys
 import importlib
 import inspect
-import pkg_resources
 import re
 
+from importlib.metadata import version
 from functools import wraps
 from threading import RLock
 from git import Repo
 from appdirs import user_cache_dir
+from lsprotocol.types import Position
 
 
 def merge_dicts(dict1, dict2):
@@ -71,7 +72,7 @@ def get_textlsp_name():
 
 
 def get_textlsp_version():
-    pkg_resources.require(get_textlsp_name())[0].version
+    return version(get_textlsp_name())
 
 
 def get_user_cache(app_name=None):
@@ -99,3 +100,30 @@ def batch_text(text: str, pattern: re.Pattern, max_size: int, min_size: int = 0)
 
     if sidx <= text_len:
         yield text[sidx:text_len]
+
+
+def position_to_tuple(position: Position):
+    return (position.line, position.character)
+
+
+def traverse_tree(tree):
+    cursor = tree.walk()
+
+    reached_root = False
+    while reached_root:
+        yield cursor.node
+
+        if cursor.goto_first_child():
+            continue
+
+        if cursor.goto_next_sibling():
+            continue
+
+        retracing = True
+        while retracing:
+            if not cursor.goto_parent():
+                retracing = False
+                reached_root = True
+
+            if cursor.goto_next_sibling():
+                retracing = False

@@ -72,15 +72,37 @@ class AnalyserHandler():
             if name not in self.analysers:
                 analyser.close()
 
+    def shutdown(self):
+        for analyser in self.analysers.values():
+            analyser.close()
+
     def get_diagnostics(self, doc: Document):
-        return [analyser.get_diagnostics(doc) for analyser in self.analysers.values()]
+        try:
+            return [
+                analyser.get_diagnostics(doc)
+                for analyser in self.analysers.values()
+            ]
+        except Exception as e:
+            self.language_server.show_message(
+                str('Server error. See log for details.'),
+                MessageType.Error,
+            )
+            logger.exception(str(e))
+        return []
 
     def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
         res = list()
-        for analyser in self.analysers.values():
-            tmp_lst = analyser.get_code_actions(params)
-            if tmp_lst is not None and len(tmp_lst) > 0:
-                res.extend(tmp_lst)
+        try:
+            for analyser in self.analysers.values():
+                tmp_lst = analyser.get_code_actions(params)
+                if tmp_lst is not None and len(tmp_lst) > 0:
+                    res.extend(tmp_lst)
+        except Exception as e:
+            self.language_server.show_message(
+                str('Server error. See log for details.'),
+                MessageType.Error,
+            )
+            logger.exception(str(e))
 
         return res if len(res) > 0 else None
 
@@ -96,7 +118,16 @@ class AnalyserHandler():
         if len(functions) == 0:
             return
 
-        await asyncio.wait(functions)
+        done, pending = await asyncio.wait(functions)
+        for task in done:
+            try:
+                task.result()
+            except Exception as e:
+                self.language_server.show_message(
+                    str('Server error. See log for details.'),
+                    MessageType.Error,
+                )
+                logger.exception(str(e))
 
     async def _did_open(
         self,
@@ -206,6 +237,12 @@ class AnalyserHandler():
                     str(f'{analyser_name}: {e}'),
                     MessageType.Error,
                 )
+            except Exception as e:
+                self.language_server.show_message(
+                    str('Server error. See log for details.'),
+                    MessageType.Error,
+                )
+                logger.exception(str(e))
         else:
             await self._submit_task(self._command_analyse, args)
 
@@ -217,7 +254,14 @@ class AnalyserHandler():
         ext_command = f'command_{command}'
 
         if hasattr(analyser, ext_command):
-            getattr(analyser, ext_command)(**args)
+            try:
+                getattr(analyser, ext_command)(**args)
+            except Exception as e:
+                self.language_server.show_message(
+                    str('Server error. See log for details.'),
+                    MessageType.Error,
+                )
+                logger.exception(str(e))
         else:
             self.language_server.show_message(
                 str(f'No custom command supported by {analyser}: {command}'),
@@ -230,10 +274,17 @@ class AnalyserHandler():
 
     def get_completions(self, params: Optional[CompletionParams] = None) -> CompletionList:
         comp_lst = list()
-        for _, analyser in self.analysers.items():
-            tmp = analyser.get_completions(params)
-            if tmp is not None and len(tmp) > 0:
-                comp_lst.extend(tmp)
+        try:
+            for _, analyser in self.analysers.items():
+                tmp = analyser.get_completions(params)
+                if tmp is not None and len(tmp) > 0:
+                    comp_lst.extend(tmp)
+        except Exception as e:
+            self.language_server.show_message(
+                str('Server error. See log for details.'),
+                MessageType.Error,
+            )
+            logger.exception(str(e))
 
         return CompletionList(
             is_incomplete=False,

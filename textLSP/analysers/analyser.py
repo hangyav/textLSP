@@ -1,4 +1,4 @@
-import bisect
+import logging
 
 from typing import List, Optional
 from pygls.server import LanguageServer
@@ -21,14 +21,21 @@ from lsprotocol.types import (
         TextEdit,
         Command,
         VersionedTextDocumentIdentifier,
-        MessageType,
         CompletionParams,
         CompletionList,
 )
 
 from ..documents.document import BaseDocument, ChangeTracker
 from ..utils import merge_dicts
-from ..types import Interval, TextLSPCodeActionKind, ProgressBar
+from ..types import (
+    Interval,
+    TextLSPCodeActionKind,
+    ProgressBar,
+    PositionDict,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 class Analyser():
@@ -75,98 +82,196 @@ class Analyser():
     def _did_change(self, doc: Document, changes: List[Interval]):
         raise NotImplementedError()
 
-    def _get_line_shifts(self, params: DidChangeTextDocumentParams) -> List:
-        res = list()
+    def _handle_line_shifts(self, params: DidChangeTextDocumentParams):
+        # FIXME: this method is very complex, try to make it easier to read
+        should_update_diagnostics = False
+        doc = self.get_document(params)
+
+        val = 0
+        accumulative_shifts = list()
+        # handling inline shifts and building a list of line shifts for later
         for change in params.content_changes:
             if type(change) == TextDocumentContentChangeEvent_Type2:
                 continue
 
+            if change.range.start != change.range.end:
+                tmp_range = Range(
+                    start=Position(
+                        line=change.range.start.line-val,
+                        character=change.range.start.character,
+                    ),
+                    end=Position(
+                        line=change.range.end.line-val,
+                        character=change.range.start.character,
+                    ),
+                )
+                num = self.remove_code_items_at_range(doc, tmp_range, (True, False))
+                should_update_diagnostics = should_update_diagnostics or num > 0
+
+            change_text_len = len(change.text)
             line_diff = change.range.end.line - change.range.start.line
             diff = change.text.count('\n') - line_diff
-            if diff != 0:
-                res.append((change.range.start.line, diff))
+            if diff == 0:
+                in_line_diff = change.range.start.character - change.range.end.character
+                in_line_diff += change_text_len
+                if in_line_diff != 0:
+                    # if only edits in a given line, let's shift the items
+                    # in the line
+                    next_pos = Position(
+                        line=change.range.start.line+1,
+                        character=0,
+                    )
 
-        return res
+                    for diag in list(
+                        self._diagnostics_dict[doc.uri].irange_values(
+                            minimum=change.range.end,
+                            maximum=next_pos,
+                            inclusive=(True, False)
+                        )
+                    ):
+                        item_range = diag.range
+                        diag.range = Range(
+                            start=Position(
+                                line=item_range.start.line,
+                                character=item_range.start.character+in_line_diff
+                            ),
+                            end=Position(
+                                line=item_range.end.line,
+                                character=item_range.end.character +
+                                (in_line_diff if item_range.start.line ==
+                                 item_range.end.line else 0)
+                            )
+                        )
+                        self._diagnostics_dict[doc.uri].update(
+                            item_range.start,
+                            diag.range.start,
+                            diag
+                        )
+                        should_update_diagnostics = True
 
-    def _handle_line_shifts(self, doc: BaseDocument, line_shifts: List):
-        """
-        params: line_shifts: List of tuples (line, shift) should be sorted
-        """
-        if len(line_shifts) == 0:
-            return
+                    for action in list(
+                            self._code_actions_dict[doc.uri].irange_values(
+                                minimum=change.range.end,
+                                maximum=next_pos,
+                                inclusive=(True, False)
+                            )
+                    ):
+                        item_range = action.edit.document_changes[0].edits[0].range
+                        action.edit.document_changes[0].edits[0].range = Range(
+                            start=Position(
+                                line=item_range.start.line,
+                                character=item_range.start.character+in_line_diff
+                            ),
+                            end=Position(
+                                line=item_range.end.line,
+                                character=item_range.end.character +
+                                (in_line_diff if item_range.start.line ==
+                                 item_range.end.line else 0)
+                            )
+                        )
+                        self._code_actions_dict[doc.uri].update(
+                            item_range.start,
+                            action.edit.document_changes[0].edits[0].range.start,
+                            action
+                        )
+            else:
+                # There is a line shift: diff > 0
+                val += diff
+                accumulative_shifts.append((change.range.start, val, change))
+        pos = doc.last_position(True)
+        pos = Position(
+            line=pos.line - (accumulative_shifts[-1][1] if len(accumulative_shifts) else 0) + 1,
+            character=0
+        )
+        accumulative_shifts.append((pos, val))
 
-        val = 0
-        bisect_lst = [line_shifts[0][0]]
-        accumulative_shifts = [(line_shifts[0][0], 0)]
-        for shift in line_shifts:
-            val += shift[1]
-            accumulative_shifts.append((shift[0]+1, val))
-            bisect_lst.append(shift[0]+1)
-        num_shifts = len(accumulative_shifts)
+        if len(accumulative_shifts) == 0:
+            return should_update_diagnostics
 
-        # TODO extract to function
-        # diagnostics
-        diagnostics = list()
-        for diag in self._diagnostics_dict[doc.uri]:
-            range = diag.range
-            idx = bisect.bisect_left(bisect_lst, range.start.line)
-            idx = min(idx, num_shifts-1)
+        # handling line shifts ############################################
+        for idx in range(len(accumulative_shifts)-1):
+            pos = accumulative_shifts[idx][0]
+            next_pos = accumulative_shifts[idx+1][0]
             shift = accumulative_shifts[idx][1]
 
-            if shift != 0:
-                if range.start.line + shift < 0:
-                    continue
+            for diag in list(
+                    self._diagnostics_dict[doc.uri].irange_values(
+                        minimum=pos,
+                        maximum=next_pos,
+                        inclusive=(True, False)
+                    )
+            ):
+                item_range = diag.range
+                char_shift = 0
+                if item_range.start.line == pos.line:
+                    char_shift = item_range.start.character - \
+                        (pos.character + len(accumulative_shifts[idx][2].text))
                 diag.range = Range(
                     start=Position(
-                        line=range.start.line + shift,
-                        character=range.start.character
+                        line=item_range.start.line + shift,
+                        character=item_range.start.character - char_shift
                     ),
                     end=Position(
-                        line=range.end.line + shift,
-                        character=range.end.character
+                        line=item_range.end.line + shift,
+                        character=item_range.end.character -
+                        (char_shift if item_range.start.line ==
+                         item_range.end.line else 0)
                     )
                 )
-            diagnostics.append(diag)
-        self._diagnostics_dict[doc.uri] = diagnostics
+                self._diagnostics_dict[doc.uri].update(
+                    item_range.start,
+                    diag.range.start,
+                    diag
+                )
+                should_update_diagnostics = True
 
-        # code actions
-        code_actions = list()
-        for action in self._code_actions_dict[doc.uri]:
-            range = action.edit.document_changes[0].edits[0].range
-            idx = bisect.bisect_left(bisect_lst, range.start.line)
-            idx = min(idx, num_shifts-1)
-            shift = accumulative_shifts[idx][1]
-
-            if shift != 0:
-                if range.start.line + shift < 0:
-                    continue
+            for action in list(
+                    self._code_actions_dict[doc.uri].irange_values(
+                        minimum=pos,
+                        maximum=next_pos,
+                        inclusive=(True, False)
+                    )
+            ):
+                item_range = action.edit.document_changes[0].edits[0].range
+                char_shift = 0
+                if item_range.start.line == pos.line:
+                    char_shift = item_range.start.character - \
+                        (pos.character + len(accumulative_shifts[idx][2].text))
                 action.edit.document_changes[0].edits[0].range = Range(
                     start=Position(
-                        line=range.start.line + shift,
-                        character=range.start.character
+                        line=item_range.start.line + shift,
+                        character=item_range.start.character - char_shift
                     ),
                     end=Position(
-                        line=range.end.line + shift,
-                        character=range.end.character
+                        line=item_range.end.line + shift,
+                        character=item_range.end.character -
+                        (char_shift if item_range.start.line ==
+                         item_range.end.line else 0)
                     )
                 )
-            code_actions.append(action)
-        self._code_actions_dict[doc.uri] = code_actions
+                self._code_actions_dict[doc.uri].update(
+                    item_range.start,
+                    action.edit.document_changes[0].edits[0].range.start,
+                    action
+                )
+
+        return should_update_diagnostics
 
     def _remove_overflown_code_items(self, doc: BaseDocument):
         last_position = doc.last_position(True)
 
-        self._diagnostics_dict[doc.uri] = [
-            diag
-            for diag in self._diagnostics_dict[doc.uri]
-            if diag.range.start <= last_position
-        ]
+        self._diagnostics_dict[doc.uri].remove_from(last_position, False)
+        self._code_actions_dict[doc.uri].remove_from(last_position, False)
 
-        self._code_actions_dict[doc.uri] = [
-            action
-            for action in self._code_actions_dict[doc.uri]
-            if action.edit.document_changes[0].edits[0].range.start <= last_position
-        ]
+    def _handle_shifts(self, params: DidChangeTextDocumentParams):
+        """
+        Handlines line shifts and position shifts within lines
+        """
+        doc = self.get_document(params)
+        should_update_diagnostics = self._handle_line_shifts(params)
+        self._remove_overflown_code_items(doc)
+
+        return should_update_diagnostics
 
     def _update_single_code_action(self, action: CodeAction, doc: BaseDocument):
         # update document version
@@ -187,13 +292,9 @@ class Analyser():
                 doc,
             )
 
-
     def did_change(self, params: DidChangeTextDocumentParams):
-        # TODO handle shifts within lines
-        line_shifts = self._get_line_shifts(params)
         doc = self.get_document(params)
-        self._handle_line_shifts(doc, line_shifts)
-        self._remove_overflown_code_items(doc)
+        should_update_diagnostics = self._handle_shifts(params)
         self._update_code_actions(doc)
 
         if self.should_run_on(Analyser.CONFIGURATION_CHECK_ON_CHANGE):
@@ -203,18 +304,18 @@ class Analyser():
                 )
             else:
                 changes = self._content_change_dict[doc.uri].get_changes()
+                self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
                 with ProgressBar(
                         self.language_server,
                         f'{self.name} checking',
                         token=self._progressbar_token
                 ):
                     self._did_change(doc, changes)
-                self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
-        elif len(line_shifts) > 0:
+        elif should_update_diagnostics:
             self.language_server.publish_stored_diagnostics(doc)
 
     def update_document(self, doc: Document, change: TextDocumentContentChangeEvent):
-        self._content_change_dict[doc.uri].update_document(change)
+        self._content_change_dict[doc.uri].update_document(change, doc)
 
     def did_save(self, params: DidSaveTextDocumentParams):
         if self.should_run_on(Analyser.CONFIGURATION_CHECK_ON_SAVE):
@@ -227,13 +328,13 @@ class Analyser():
                     )
                 else:
                     changes = self._content_change_dict[doc.uri].get_changes()
+                    self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
                     with ProgressBar(
                             self.language_server,
                             f'{self.name} checking',
                             token=self._progressbar_token
                     ):
                         self._did_change(doc, changes)
-                    self._content_change_dict[doc.uri] = ChangeTracker(doc, True)
 
     def _did_close(self, doc: Document):
         pass
@@ -273,31 +374,24 @@ class Analyser():
         )
 
     def init_diagnostics(self, doc: Document):
-        self._diagnostics_dict[doc.uri] = list()
+        self._diagnostics_dict[doc.uri] = PositionDict()
 
     def get_diagnostics(self, doc: Document):
-        return self._diagnostics_dict.get(doc.uri, list())
+        return self._diagnostics_dict.get(doc.uri, PositionDict())
 
     def add_diagnostics(self, doc: Document, diagnostics: List[Diagnostic]):
-        self._diagnostics_dict[doc.uri] += diagnostics
+        for diag in diagnostics:
+            self._diagnostics_dict[doc.uri].add(diag.range.start, diag)
         self.language_server.publish_stored_diagnostics(doc)
 
-    def remove_code_items_at_rage(self, doc: Document, pos_range: Range):
-        diagnostics = list()
-        for diag in self.get_diagnostics(doc):
-            if diag.range.end < pos_range.start or diag.range.start > pos_range.end:
-                diagnostics.append(diag)
-        self._diagnostics_dict[doc.uri] = diagnostics
-
-        code_actions = list()
-        for action in self._code_actions_dict[doc.uri]:
-            range = action.edit.document_changes[0].edits[0].range
-            if range.end < pos_range.start or range.start > pos_range.end:
-                code_actions.append(action)
-        self._code_actions_dict[doc.uri] = code_actions
+    def remove_code_items_at_range(self, doc: Document, pos_range: Range, inclusive=(True, True)):
+        num = 0
+        num += self._diagnostics_dict[doc.uri].remove_between(pos_range, inclusive)
+        num += self._code_actions_dict[doc.uri].remove_between(pos_range, inclusive)
+        return num
 
     def init_code_actions(self, doc: Document):
-        self._code_actions_dict[doc.uri] = list()
+        self._code_actions_dict[doc.uri] = PositionDict()
 
     def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
         doc = self.get_document(params)
@@ -306,11 +400,12 @@ class Analyser():
         # TODO make this faster?
         res = [
             action
-            for action in self._code_actions_dict[doc.uri]
+            for action in self._code_actions_dict[doc.uri].irange_values(maximum=range.start)
             if (
                 (
-                    action.edit.document_changes[0].edits[0].range.start <= range.start
-                    and action.edit.document_changes[0].edits[0].range.end >= range.end
+                    # action.edit.document_changes[0].edits[0].range.start <= range.start
+                    # and
+                    action.edit.document_changes[0].edits[0].range.end >= range.end
                 )
                 # if it's not reachable by the cursor
                 or (
@@ -379,7 +474,11 @@ class Analyser():
         return res
 
     def add_code_actions(self, doc: Document, actions: List[CodeAction]):
-        self._code_actions_dict[doc.uri] += actions
+        for action in actions:
+            self._code_actions_dict[doc.uri].add(
+                action.edit.document_changes[0].edits[0].range.start,
+                action,
+            )
 
     @staticmethod
     def build_single_suggestion_action(

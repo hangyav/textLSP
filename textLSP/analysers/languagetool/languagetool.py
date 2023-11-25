@@ -82,7 +82,7 @@ class LanguageToolAnalyser(Analyser):
         for change in changes:
             paragraph = doc.paragraph_at_offset(
                 change.start,
-                min_length=change.length,
+                min_offset=change.start + change.length-1,
                 cleaned=True,
             )
             if paragraph in checked:
@@ -127,7 +127,7 @@ class LanguageToolAnalyser(Analyser):
                 end_sent.start-paragraph.start-1 + end_sent.length,
                 True
             )
-            self.remove_code_items_at_rage(doc, pos_range)
+            self.remove_code_items_at_range(doc, pos_range)
 
             diags, actions = self._analyse(
                 doc.text_at_offset(
@@ -170,6 +170,9 @@ class LanguageToolAnalyser(Analyser):
         for lang, tool in self.tools.items():
             tool.close()
         self.tool = dict()
+
+    def __del__(self):
+        self.close()
 
     def _get_mapped_language(self, language):
         return LANGUAGE_MAP[language]
