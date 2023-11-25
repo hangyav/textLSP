@@ -41,7 +41,7 @@ setup(
         'appdirs==1.4.4',
         'torch==2.1.0',
         'openai==1.2.4',
-        'transformers==4.35.1',
+        'transformers==4.35.2',
         'sortedcontainers==2.4.0',
     ],
     extras_require={
