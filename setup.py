@@ -33,15 +33,15 @@ setup(
         'console_scripts': ['textlsp=textLSP.cli:main'],
     },
     install_requires=[
-        'pygls==1.2.0',
+        'pygls==1.2.1',
         'lsprotocol==2023.0.0',
         'language-tool-python==2.7.1',
         'tree_sitter==0.20.4',
         'gitpython==3.1.40',
         'appdirs==1.4.4',
         'torch==2.1.1',
-        'openai==1.3.5',
-        'transformers==4.35.2',
+        'openai==1.3.8',
+        'transformers==4.36.0',
         'sortedcontainers==2.4.0',
     ],
     extras_require={
