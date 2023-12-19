@@ -1,11 +1,5 @@
 import os
-import sys
 from setuptools import setup, find_packages
-
-if sys.version_info >= (3, 12, 0):
-    # due to current pytorch limitations
-    print('Required python version <= 3.12.0')
-    sys.exit(-1)
 
 
 # Utility function to read the README file.
