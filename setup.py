@@ -1,11 +1,5 @@
 import os
-import sys
 from setuptools import setup, find_packages
-
-if sys.version_info >= (3, 12, 0):
-    # due to current pytorch limitations
-    print('Required python version <= 3.12.0')
-    sys.exit(-1)
 
 
 # Utility function to read the README file.
@@ -39,9 +33,9 @@ setup(
         'tree_sitter==0.20.4',
         'gitpython==3.1.40',
         'appdirs==1.4.4',
-        'torch==2.1.1',
-        'openai==1.3.8',
-        'transformers==4.36.0',
+        'torch==2.1.2',
+        'openai==1.5.0',
+        'transformers==4.36.1',
         'sortedcontainers==2.4.0',
     ],
     extras_require={
