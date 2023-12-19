@@ -1,3 +1,5 @@
+import pytest
+
 from threading import Event
 from lsprotocol.types import (
     DidOpenTextDocumentParams,
@@ -10,8 +12,29 @@ from lsprotocol.types import (
     DidSaveTextDocumentParams,
     TextDocumentIdentifier,
 )
+from textLSP.documents.document import BaseDocument
+from textLSP.analysers.languagetool import LanguageToolAnalyser
 
 from tests.lsp_test_client import session, utils
+
+
+@pytest.fixture
+def analyser():
+    return LanguageToolAnalyser(
+        None,
+        {},
+        'languagetool',
+    )
+
+
+def test_analyse(analyser):
+    doc = BaseDocument(
+        'tmp.txt',
+        'This is a santance.',
+        config={},
+        version=0
+    )
+    analyser._analyse(doc.cleaned_source, doc)
 
 
 def test_bug1(json_converter, langtool_ls_onsave):

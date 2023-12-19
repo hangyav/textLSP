@@ -42,6 +42,8 @@ setup(
         'dev': [
             'pytest==7.4.3',
             'python-lsp-jsonrpc==1.1.2',
+            'pytest-cov==4.1.0',
+            'coverage-threshold==0.4.4'
         ]
     },
 )

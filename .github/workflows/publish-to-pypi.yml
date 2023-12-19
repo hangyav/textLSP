@@ -15,6 +15,13 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: "3.11"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        make install-test
+    - name: Test with pytest
+      run: |
+        make test
     - name: Install pypa/setuptools
       run: >-
         python -m
