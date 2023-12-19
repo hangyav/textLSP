@@ -57,40 +57,28 @@ class OpenAIAnalyser(Analyser):
         self._client = OpenAI(api_key=self.config[self.CONFIGURATION_API_KEY])
 
     def _edit(self, text) -> List[TokenDiff]:
-        try:
-            # res = openai.Edit.create(
-            res = self._client.edits.create(
-                model=self.config.get(self.CONFIGURATION_EDIT_MODEL, self.SETTINGS_DEFAULT_EDIT_MODEL),
-                instruction=self.config.get(self.CONFIGURATION_EDIT_INSTRUCTION, self.SETTINGS_DEFAULT_EDIT_INSTRUCTION),
-                input=text,
-                temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
-            )
-            if len(res.choices) > 0:
-                return TokenDiff.token_level_diff(text, res.choices[0].text.strip())
-        except APIError as e:
-            self.language_server.show_message(
-                str(e),
-                MessageType.Error,
-            )
+        # res = openai.Edit.create(
+        res = self._client.edits.create(
+            model=self.config.get(self.CONFIGURATION_EDIT_MODEL, self.SETTINGS_DEFAULT_EDIT_MODEL),
+            instruction=self.config.get(self.CONFIGURATION_EDIT_INSTRUCTION, self.SETTINGS_DEFAULT_EDIT_INSTRUCTION),
+            input=text,
+            temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
+        )
+        if len(res.choices) > 0:
+            return TokenDiff.token_level_diff(text, res.choices[0].text.strip())
 
         return []
 
     def _generate(self, text) -> Optional[str]:
-        try:
-            res = self._client.completions.create(
-                model=self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL),
-                prompt=text,
-                temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
-                max_tokens=self.config.get(self.CONFIGURATION_MAX_TOKEN, self.SETTINGS_DEFAULT_MAX_TOKEN),
-            )
+        res = self._client.completions.create(
+            model=self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL),
+            prompt=text,
+            temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
+            max_tokens=self.config.get(self.CONFIGURATION_MAX_TOKEN, self.SETTINGS_DEFAULT_MAX_TOKEN),
+        )
 
-            if len(res.choices) > 0:
-                return res.choices[0].text.strip()
-        except APIError as e:
-            self.language_server.show_message(
-                str(e),
-                MessageType.Error,
-            )
+        if len(res.choices) > 0:
+            return res.choices[0].text.strip()
 
         return None
 
@@ -98,7 +86,16 @@ class OpenAIAnalyser(Analyser):
         diagnostics = list()
         code_actions = list()
 
-        for edit in self._edit(text):
+        try:
+            edits = self._edit(text)
+        except APIError as e:
+            self.language_server.show_message(
+                str(e),
+                MessageType.Error,
+            )
+            edits = []
+
+        for edit in edits:
             if edit.type == TokenDiff.INSERT:
                 if edit.offset >= len(text):
                     edit.new_token = f' {edit.new_token}'
@@ -229,8 +226,13 @@ class OpenAIAnalyser(Analyser):
         ):
             doc = self.get_document(uri)
 
-            new_text = self._generate(prompt)
-            if new_text is None:
+            try:
+                new_text = self._generate(prompt)
+            except APIError as e:
+                self.language_server.show_message(
+                    str(e),
+                    MessageType.Error,
+                )
                 return
 
             new_text += '\n'

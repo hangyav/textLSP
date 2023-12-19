@@ -8,10 +8,10 @@ def analyser():
     return HFCompletionAnalyser(
         None,
         {},
-        'hf_checker',
+        'hf_completion',
     )
 
 
 def test_simple(analyser):
-    # test initialization
-    pass
+    text = 'The next word should be '
+    analyser._get_text_completions(text, len(text)-1)

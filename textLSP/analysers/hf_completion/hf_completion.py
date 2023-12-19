@@ -65,22 +65,25 @@ class HFCompletionAnalyser(Analyser):
         uncleaned_offset = max(0, doc.offset_at_position(params.position)-1)
         # XXX: this still get's activated in e.g. commented lines
         if doc.source[uncleaned_offset] in {' ', '\n'}:
-            input = ''
-            if in_paragraph_offset > 0:
-                input += paragraph[:in_paragraph_offset+1].strip(' ')
-                if input[-1] != '\n':
-                    input += ' '
-            input += f'{self.completor.tokenizer.mask_token} '
-            if in_paragraph_offset < len(paragraph):
-                input += paragraph[in_paragraph_offset+1:].strip()
+            return self._get_text_completions(paragraph, in_paragraph_offset)
 
-            res = list()
-            for item in self.completor(
-                input,
-                top_k=self.config.get(self.CONFIGURATION_TOP_K, self.SETTINGS_DEFAULT_TOP_K),
-            ):
-                completion_item = CompletionItem(
-                    label=item['token_str'],
-                )
-                res.append(completion_item)
-            return res
+    def _get_text_completions(self, paragraph, in_paragraph_offset):
+        input = ''
+        if in_paragraph_offset > 0:
+            input += paragraph[:in_paragraph_offset+1].strip(' ')
+            if input[-1] != '\n':
+                input += ' '
+        input += f'{self.completor.tokenizer.mask_token} '
+        if in_paragraph_offset < len(paragraph) - 1:
+            input += paragraph[in_paragraph_offset+1:].strip()
+
+        res = list()
+        for item in self.completor(
+            input,
+            top_k=self.config.get(self.CONFIGURATION_TOP_K, self.SETTINGS_DEFAULT_TOP_K),
+        ):
+            completion_item = CompletionItem(
+                label=item['token_str'],
+            )
+            res.append(completion_item)
+        return res
