@@ -5,4 +5,4 @@ install-development:
 	pip install -e .[dev]
 
 uninstall:
-	piip uninstall textLSP
+	pip uninstall textLSP
