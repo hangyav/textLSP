@@ -34,13 +34,13 @@ setup(
         'gitpython==3.1.40',
         'appdirs==1.4.4',
         'torch==2.1.2',
-        'openai==1.5.0',
+        'openai==1.6.1',
         'transformers==4.36.2',
         'sortedcontainers==2.4.0',
     ],
     extras_require={
         'dev': [
-            'pytest==7.4.3',
+            'pytest==7.4.4',
             'python-lsp-jsonrpc==1.1.2',
             'pytest-cov==4.1.0',
             'coverage-threshold==0.4.4'
