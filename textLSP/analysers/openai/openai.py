@@ -31,16 +31,14 @@ logger = logging.getLogger(__name__)
 
 class OpenAIAnalyser(Analyser):
     CONFIGURATION_API_KEY = 'api_key'
-    CONFIGURATION_EDIT_MODEL = 'edit_model'
     CONFIGURATION_MODEL = 'model'
     CONFIGURATION_EDIT_INSTRUCTION = 'edit_instruction'
     CONFIGURATION_TEMPERATURE = 'temperature'
     CONFIGURATION_MAX_TOKEN = 'max_token'
     CONFIGURATION_PROMPT_MAGIC = 'prompt_magic'
 
-    SETTINGS_DEFAULT_EDIT_MODEL = 'text-davinci-edit-001'
     SETTINGS_DEFAULT_MODEL = 'text-babbage-001'
-    SETTINGS_DEFAULT_EDIT_INSTRUCTION = 'Fix the spelling and grammar errors'
+    SETTINGS_DEFAULT_EDIT_INSTRUCTION = 'Fix spelling and grammar errors.'
     SETTINGS_DEFAULT_TEMPERATURE = 0
     SETTINGS_DEFAULT_MAX_TOKEN = 16
     SETTINGS_DEFAULT_PROMPT_MAGIC = '%OPENAI% '
@@ -56,29 +54,54 @@ class OpenAIAnalyser(Analyser):
             raise ConfigurationError(f'Reqired parameter: {name}.{self.CONFIGURATION_API_KEY}')
         self._client = OpenAI(api_key=self.config[self.CONFIGURATION_API_KEY])
 
+    def _chat_endpoint(
+        self,
+        system_msg: str,
+        user_msg: str,
+        model: str,
+        temperature: int,
+        max_tokens: int = None,
+    ):
+        assert system_msg is not None or user_msg is not None
+
+        messages = list()
+        if system_msg is not None:
+            messages.append({"role": "system", "content": system_msg}),
+        if user_msg is not None:
+            messages.append({"role": "user", "content": user_msg}),
+
+        res = self._client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+
+        return res
+
     def _edit(self, text) -> List[TokenDiff]:
-        # res = openai.Edit.create(
-        res = self._client.edits.create(
-            model=self.config.get(self.CONFIGURATION_EDIT_MODEL, self.SETTINGS_DEFAULT_EDIT_MODEL),
-            instruction=self.config.get(self.CONFIGURATION_EDIT_INSTRUCTION, self.SETTINGS_DEFAULT_EDIT_INSTRUCTION),
-            input=text,
+        res = self._chat_endpoint(
+            system_msg=self.config.get(self.CONFIGURATION_EDIT_INSTRUCTION, self.SETTINGS_DEFAULT_EDIT_INSTRUCTION),
+            user_msg=text,
+            model=self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL),
             temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
         )
         if len(res.choices) > 0:
-            return TokenDiff.token_level_diff(text, res.choices[0].text.strip())
+            return TokenDiff.token_level_diff(text, res.choices[0].message.content.strip())
 
         return []
 
     def _generate(self, text) -> Optional[str]:
-        res = self._client.completions.create(
+        res = self._chat_endpoint(
+            system_msg=text,
+            user_msg=None,
             model=self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL),
-            prompt=text,
             temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
             max_tokens=self.config.get(self.CONFIGURATION_MAX_TOKEN, self.SETTINGS_DEFAULT_MAX_TOKEN),
         )
 
         if len(res.choices) > 0:
-            return res.choices[0].text.strip()
+            return res.choices[0].message.content.strip()
 
         return None
 
