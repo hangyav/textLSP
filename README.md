@@ -146,11 +146,7 @@ textLSP = {
                 on_save = false,
                 on_change = false,
             },
-            -- model = 'text-ada-001',
-            model = 'text-babbage-001',
-            -- model = 'text-curie-001',
-            -- model = 'text-davinci-003',
-            edit_model = 'text-davinci-edit-001',
+            model = 'gpt-3.5-turbo',
             max_token = 16,
         },
         grammarbot = {
