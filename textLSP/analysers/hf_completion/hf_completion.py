@@ -13,6 +13,7 @@ from transformers import pipeline
 
 from ..analyser import Analyser
 from ...types import ConfigurationError
+from ...nn_utils import get_device
 
 
 logger = logging.getLogger(__name__)
@@ -31,11 +32,12 @@ class HFCompletionAnalyser(Analyser):
 
     def __init__(self, language_server: LanguageServer, config: dict, name: str):
         super().__init__(language_server, config, name)
+        use_gpu = self.config.get(self.CONFIGURATION_GPU, self.SETTINGS_DEFAULT_GPU)
         model = self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL)
         self.completor = pipeline(
             'fill-mask',
             model,
-            device='cuda:0' if self.config.get(self.CONFIGURATION_GPU, self.SETTINGS_DEFAULT_GPU) else 'cpu',
+            device=get_device(use_gpu)
         )
         if self.completor.tokenizer.mask_token is None:
             raise ConfigurationError(f'The tokenizer of {model} does not have a MASK token.')
