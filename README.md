@@ -42,6 +42,27 @@ The following tools run on the local system:
 
       ```pip install git+https://github.com/PrithivirajDamodaran/Gramformer.git```
 * hf_checker: Huggingface `text2text-generation` pipline based analyser. See the [flan-t5-large-grammar-synthesis](https://huggingface.co/pszemraj/flan-t5-large-grammar-synthesis) model for an example.
+   <details><summary>Models</summary>
+       * pszemraj/grammar-synthesis-small
+       * pszemraj/grammar-synthesis-large
+       * pszemraj/flan-t5-large-grammar-synthesis
+       * pszemraj/flan-t5-xl-grammar-synthesis
+       * pszemraj/bart-base-grammar-synthesis
+   </details>
+* hf_instruction_checker: Huggingface `text2text-generation` pipline based
+analyser using instruction tuned models. See the Grammarly's
+[CoEdIT](https://github.com/vipulraheja/coedit) model for an example. Supports
+error checking and text generation, such as paraphrasing, through the `%HF%`
+magic command (see the OpenAI analyser below).
+   <details><summary>Models</summary>
+       * grammarly/coedit-large
+       * grammarly/coedit-xl
+       * grammarly/coedit-xl-composite
+       * grammarly/coedit-xxl
+       * jbochi/coedit-base
+       * jbochi/coedit-small
+       * jbochi/candle-coedit-quantized
+   </details>
 * [hf_completion](https://huggingface.co/docs/transformers/task_summary#language-modeling): Huggingface `fill-mask` pipline based text completion.
 
 ### Tools using remote services
@@ -121,6 +142,18 @@ textLSP = {
             }
         },
         hf_checker = {
+            enabled = false,
+            gpu = false,
+            quantize=32,
+            model='pszemraj/flan-t5-large-grammar-synthesis',
+            min_length=40,
+            check_text = {
+                on_open = false,
+                on_save = true,
+                on_change = false,
+            }
+        },
+        hf_instruction_checker = {
             enabled = true,
             gpu = false,
             quantize=32,

@@ -1,5 +1,4 @@
 import logging
-import openai
 from openai import OpenAI, APIError
 
 from typing import List, Tuple, Optional
@@ -287,9 +286,6 @@ class OpenAIAnalyser(Analyser):
     def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
         doc = self.get_document(params)
         res = super().get_code_actions(params)
-
-        if params.range.start != params.range.end:
-            return res
 
         if len(doc.lines) > 0:
             line = doc.lines[params.range.start.line].strip()

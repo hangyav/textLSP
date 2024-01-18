@@ -32,32 +32,12 @@ class HFCheckerAnalyser(Analyser):
     CONFIGURATION_GPU = 'gpu'
     CONFIGURATION_MODEL = 'model'
     CONFIGURATION_MIN_LENGTH = 'min_length'
-    CONFIGURATION_INSTRUCITON = 'instruction'
     CONFIGURATION_QUANTIZE = 'quantize'
 
     SETTINGS_DEFAULT_GPU = False
     SETTINGS_DEFAULT_MODEL = 'grammarly/coedit-large'
     SETTINGS_DEFAULT_MIN_LENGTH = 0
-    SETTINGS_DEFAULT_INSTRUCTION = 'Fix the grammar:'
     SETTINGS_DEFAULT_QUANTIZE = 32
-
-    INSTRUCTION_MODELS = {
-        'grammarly/coedit-large',
-        'grammarly/coedit-xl',
-        'grammarly/coedit-xl-composite',
-        'grammarly/coedit-xxl',
-        'jbochi/coedit-base',
-        'jbochi/coedit-small',
-        'jbochi/candle-coedit-quantized',
-    }
-
-    NON_INSTRUCTION_MODELS = {
-        'pszemraj/grammar-synthesis-small',
-        'pszemraj/grammar-synthesis-large',
-        'pszemraj/flan-t5-large-grammar-synthesis',
-        'pszemraj/flan-t5-xl-grammar-synthesis',
-        'pszemraj/bart-base-grammar-synthesis',
-    }
 
     def __init__(self, language_server: LanguageServer, config: dict, name: str):
         super().__init__(language_server, config, name)
@@ -75,33 +55,16 @@ class HFCheckerAnalyser(Analyser):
             )
             self.config[self.CONFIGURATION_QUANTIZE] = 32
 
-        instruction = self.config.get(self.CONFIGURATION_INSTRUCITON, self.SETTINGS_DEFAULT_INSTRUCTION)
-        if instruction is None:
-            self.config[self.CONFIGURATION_INSTRUCITON] = ''
-            instruction = ''
         model = self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL)
-        if len(instruction) > 0 and model in self.NON_INSTRUCTION_MODELS:
-            language_server.show_message(
-                f'Model {model} does not support instructions. Known instruction'
-                f' models: {", ".join(self.INSTRUCTION_MODELS)}',
-                MessageType.Error,
-            )
-            self.config[self.CONFIGURATION_INSTRUCITON] = ''
-        elif len(instruction) == 0 and model in self.INSTRUCTION_MODELS:
-            language_server.show_message(
-                f'Model {model} requires an instruction. Using default. Known'
-                f' non-instruction models:'
-                f' {", ".join(self.NON_INSTRUCTION_MODELS)}',
-                MessageType.Error,
-            )
-            self.config[self.CONFIGURATION_INSTRUCITON] = self.SETTINGS_DEFAULT_INSTRUCTION
-
-        self.corrector = pipeline(
+        self._corrector = pipeline(
             'text2text-generation',
             model,
             device=device,
             model_kwargs=model_kwargs,
         )
+
+    def corrector(self, text):
+        return self._corrector(text)
 
     def _analyse_lines(self, text, doc, offset=0) -> Tuple[List[Diagnostic], List[CodeAction]]:
         diagnostics = list()
@@ -130,13 +93,10 @@ class HFCheckerAnalyser(Analyser):
         if len(text) < self.config.get(self.CONFIGURATION_MIN_LENGTH, self.SETTINGS_DEFAULT_MIN_LENGTH):
             return [], []
 
-        instruction = self.config.get(self.CONFIGURATION_INSTRUCITON, self.SETTINGS_DEFAULT_INSTRUCTION)
-        inp = f'{instruction} {text}' if len(instruction) > 0 else text
-
         diagnostics = list()
         code_actions = list()
 
-        corrected = self.corrector(inp)
+        corrected = self.corrector(text)
         if len(corrected) == 0:
             return [], []
         corrected = corrected.pop(0)['generated_text']
