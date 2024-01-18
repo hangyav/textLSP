@@ -37,6 +37,7 @@ setup(
         'openai==1.6.1',
         'transformers==4.36.2',
         'sortedcontainers==2.4.0',
+        'bitsandbytes==0.42.0',
     ],
     extras_require={
         'dev': [

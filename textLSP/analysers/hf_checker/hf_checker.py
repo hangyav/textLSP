@@ -9,6 +9,7 @@ from lsprotocol.types import (
         Position,
         TextEdit,
         CodeAction,
+        MessageType,
 )
 from pygls.server import LanguageServer
 from transformers import pipeline
@@ -18,8 +19,10 @@ from ...types import (
     Interval,
     LINE_PATTERN,
     TokenDiff,
+    ConfigurationError,
 )
 from ...documents.document import BaseDocument
+from ... import nn_utils
 
 
 logger = logging.getLogger(__name__)
@@ -29,18 +32,39 @@ class HFCheckerAnalyser(Analyser):
     CONFIGURATION_GPU = 'gpu'
     CONFIGURATION_MODEL = 'model'
     CONFIGURATION_MIN_LENGTH = 'min_length'
+    CONFIGURATION_QUANTIZE = 'quantize'
 
     SETTINGS_DEFAULT_GPU = False
-    SETTINGS_DEFAULT_MODEL = 'pszemraj/flan-t5-large-grammar-synthesis'
-    SETTINGS_DEFAULT_MIN_LENGTH = 40
+    SETTINGS_DEFAULT_MODEL = 'grammarly/coedit-large'
+    SETTINGS_DEFAULT_MIN_LENGTH = 0
+    SETTINGS_DEFAULT_QUANTIZE = 32
 
     def __init__(self, language_server: LanguageServer, config: dict, name: str):
         super().__init__(language_server, config, name)
-        self.corrector = pipeline(
+        use_gpu = self.config.get(self.CONFIGURATION_GPU, self.SETTINGS_DEFAULT_GPU)
+        device = nn_utils.get_device(use_gpu)
+
+        quanitze = self.config.setdefault(self.CONFIGURATION_QUANTIZE, self.SETTINGS_DEFAULT_QUANTIZE)
+        model_kwargs = dict()
+        try:
+            nn_utils.set_quantization_args(quanitze, device, model_kwargs)
+        except ConfigurationError as e:
+            language_server.show_message(
+                f'{self.name}: {str(e)}',
+                MessageType.Error,
+            )
+            self.config[self.CONFIGURATION_QUANTIZE] = 32
+
+        model = self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL)
+        self._corrector = pipeline(
             'text2text-generation',
-            self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL),
-            device='cuda:0' if self.config.get(self.CONFIGURATION_GPU, self.SETTINGS_DEFAULT_GPU) else 'cpu',
+            model,
+            device=device,
+            model_kwargs=model_kwargs,
         )
+
+    def corrector(self, text):
+        return self._corrector(text)
 
     def _analyse_lines(self, text, doc, offset=0) -> Tuple[List[Diagnostic], List[CodeAction]]:
         diagnostics = list()

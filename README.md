@@ -42,6 +42,31 @@ The following tools run on the local system:
 
       ```pip install git+https://github.com/PrithivirajDamodaran/Gramformer.git```
 * hf_checker: Huggingface `text2text-generation` pipline based analyser. See the [flan-t5-large-grammar-synthesis](https://huggingface.co/pszemraj/flan-t5-large-grammar-synthesis) model for an example.
+   <details><summary>Models</summary>
+      <ul>
+       <li>pszemraj/grammar-synthesis-small</li>
+       <li>pszemraj/grammar-synthesis-large</li>
+       <li>pszemraj/flan-t5-large-grammar-synthesis</li>
+       <li>pszemraj/flan-t5-xl-grammar-synthesis</li>
+       <li>pszemraj/bart-base-grammar-synthesis</li>
+      </ul>
+   </details>
+* hf_instruction_checker: Huggingface `text2text-generation` pipline based
+analyser using instruction tuned models. See the Grammarly's
+[CoEdIT](https://github.com/vipulraheja/coedit) model for an example. Supports
+error checking and text generation, such as paraphrasing, through the `%HF%`
+magic command (see the OpenAI analyser below).
+   <details><summary>Models</summary>
+      <ul>
+       <li>grammarly/coedit-large</li>
+       <li>grammarly/coedit-xl</li>
+       <li>grammarly/coedit-xl-composite</li>
+       <li>grammarly/coedit-xxl</li>
+       <li>jbochi/coedit-base</li>
+       <li>jbochi/coedit-small</li>
+       <li>jbochi/candle-coedit-quantized</li>
+      </ul>
+   </details>
 * [hf_completion](https://huggingface.co/docs/transformers/task_summary#language-modeling): Huggingface `fill-mask` pipline based text completion.
 
 ### Tools using remote services
@@ -94,9 +119,9 @@ ssh <server> textlsp
 ## Configuration
 
 Using textLSP within an editor depends on the editor of choice.
-For a few examples how to setup language servers in general in some of the popular editors see [here](https://github.com/openlawlibrary/pygls/tree/master/examples/hello-world#editor-configurations) or take a look at the related documentation of your editor.
+For a few examples how to set up language servers in general in some of the popular editors see [here](https://github.com/openlawlibrary/pygls/tree/master/examples/hello-world#editor-configurations) or take a look at the related documentation of your editor.
 
-By default all analyzers are disabled in textLSP, they have to be turned on in the settings.
+By default, all analyzers are disabled in textLSP, they have to be turned on in the settings.
 Example configuration in lua for nvim (other editors should be set up accordingly):
 
 ```lua
@@ -121,10 +146,22 @@ textLSP = {
             }
         },
         hf_checker = {
+            enabled = false,
+            gpu = false,
+            quantize=32,
+            model='pszemraj/flan-t5-large-grammar-synthesis',
+            min_length=40,
+            check_text = {
+                on_open = false,
+                on_save = true,
+                on_change = false,
+            }
+        },
+        hf_instruction_checker = {
             enabled = true,
             gpu = false,
-            model='pszemraj/flan-t5-large-grammar-synthesis',
-            -- model='pszemraj/grammar-synthesis-large',
+            quantize=32,
+            model='grammarly/coedit-large',
             min_length=40,
             check_text = {
                 on_open = false,
@@ -135,6 +172,7 @@ textLSP = {
         hf_completion = {
             enabled = true,
             gpu = false,
+            quantize=32,
             model='bert-base-multilingual-cased',
             topk=5,
         },

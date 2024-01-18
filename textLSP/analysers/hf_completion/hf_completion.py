@@ -9,10 +9,12 @@ from lsprotocol.types import (
         CodeAction,
 )
 from pygls.server import LanguageServer
+from lsprotocol.types import MessageType
 from transformers import pipeline
 
 from ..analyser import Analyser
 from ...types import ConfigurationError
+from ... import nn_utils
 
 
 logger = logging.getLogger(__name__)
@@ -23,19 +25,36 @@ class HFCompletionAnalyser(Analyser):
     CONFIGURATION_MODEL = 'model'
     CONFIGURATION_TOP_K = 'topk'
     CONFIGURATION_CONTEXT_SIZE = 'context_size'
+    CONFIGURATION_QUANTIZE = 'quantize'
 
     SETTINGS_DEFAULT_GPU = False
     SETTINGS_DEFAULT_MODEL = 'bert-base-multilingual-cased'
     SETTINGS_DEFAULT_TOP_K = 5
     SETTINGS_DEFAULT_CONTEXT_SIZE = 50
+    SETTINGS_DEFAULT_QUANTIZE = 32
 
     def __init__(self, language_server: LanguageServer, config: dict, name: str):
         super().__init__(language_server, config, name)
+        use_gpu = self.config.get(self.CONFIGURATION_GPU, self.SETTINGS_DEFAULT_GPU)
+        device = nn_utils.get_device(use_gpu)
+
+        quanitze = self.config.setdefault(self.CONFIGURATION_QUANTIZE, self.SETTINGS_DEFAULT_QUANTIZE)
+        model_kwargs = dict()
+        try:
+            nn_utils.set_quantization_args(quanitze, device, model_kwargs)
+        except ConfigurationError as e:
+            language_server.show_message(
+                f'{self.name}: {str(e)}',
+                MessageType.Error,
+            )
+            self.config[self.CONFIGURATION_QUANTIZE] = 32
+
         model = self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL)
         self.completor = pipeline(
             'fill-mask',
             model,
-            device='cuda:0' if self.config.get(self.CONFIGURATION_GPU, self.SETTINGS_DEFAULT_GPU) else 'cpu',
+            device=device,
+            model_kwargs=model_kwargs,
         )
         if self.completor.tokenizer.mask_token is None:
             raise ConfigurationError(f'The tokenizer of {model} does not have a MASK token.')
