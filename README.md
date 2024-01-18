@@ -94,9 +94,9 @@ ssh <server> textlsp
 ## Configuration
 
 Using textLSP within an editor depends on the editor of choice.
-For a few examples how to setup language servers in general in some of the popular editors see [here](https://github.com/openlawlibrary/pygls/tree/master/examples/hello-world#editor-configurations) or take a look at the related documentation of your editor.
+For a few examples how to set up language servers in general in some of the popular editors see [here](https://github.com/openlawlibrary/pygls/tree/master/examples/hello-world#editor-configurations) or take a look at the related documentation of your editor.
 
-By default all analyzers are disabled in textLSP, they have to be turned on in the settings.
+By default, all analyzers are disabled in textLSP, they have to be turned on in the settings.
 Example configuration in lua for nvim (other editors should be set up accordingly):
 
 ```lua
@@ -123,8 +123,8 @@ textLSP = {
         hf_checker = {
             enabled = true,
             gpu = false,
-            model='pszemraj/flan-t5-large-grammar-synthesis',
-            -- model='pszemraj/grammar-synthesis-large',
+            quantize=32,
+            model='grammarly/coedit-large',
             min_length=40,
             check_text = {
                 on_open = false,
@@ -135,6 +135,7 @@ textLSP = {
         hf_completion = {
             enabled = true,
             gpu = false,
+            quantize=32,
             model='bert-base-multilingual-cased',
             topk=5,
         },

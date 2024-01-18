@@ -19,9 +19,10 @@ from ...types import (
     Interval,
     LINE_PATTERN,
     TokenDiff,
+    ConfigurationError,
 )
 from ...documents.document import BaseDocument
-from ...nn_utils import get_device
+from ... import nn_utils
 
 
 logger = logging.getLogger(__name__)
@@ -32,11 +33,13 @@ class HFCheckerAnalyser(Analyser):
     CONFIGURATION_MODEL = 'model'
     CONFIGURATION_MIN_LENGTH = 'min_length'
     CONFIGURATION_INSTRUCITON = 'instruction'
+    CONFIGURATION_QUANTIZE = 'quantize'
 
     SETTINGS_DEFAULT_GPU = False
     SETTINGS_DEFAULT_MODEL = 'grammarly/coedit-large'
     SETTINGS_DEFAULT_MIN_LENGTH = 0
     SETTINGS_DEFAULT_INSTRUCTION = 'Fix the grammar:'
+    SETTINGS_DEFAULT_QUANTIZE = 32
 
     INSTRUCTION_MODELS = {
         'grammarly/coedit-large',
@@ -59,6 +62,18 @@ class HFCheckerAnalyser(Analyser):
     def __init__(self, language_server: LanguageServer, config: dict, name: str):
         super().__init__(language_server, config, name)
         use_gpu = self.config.get(self.CONFIGURATION_GPU, self.SETTINGS_DEFAULT_GPU)
+        device = nn_utils.get_device(use_gpu)
+
+        quanitze = self.config.setdefault(self.CONFIGURATION_QUANTIZE, self.SETTINGS_DEFAULT_QUANTIZE)
+        model_kwargs = dict()
+        try:
+            nn_utils.set_quantization_args(quanitze, device, model_kwargs)
+        except ConfigurationError as e:
+            language_server.show_message(
+                f'{self.name}: {str(e)}',
+                MessageType.Error,
+            )
+            self.config[self.CONFIGURATION_QUANTIZE] = 32
 
         instruction = self.config.get(self.CONFIGURATION_INSTRUCITON, self.SETTINGS_DEFAULT_INSTRUCTION)
         if instruction is None:
@@ -84,7 +99,8 @@ class HFCheckerAnalyser(Analyser):
         self.corrector = pipeline(
             'text2text-generation',
             model,
-            device=get_device(use_gpu),
+            device=device,
+            model_kwargs=model_kwargs,
         )
 
     def _analyse_lines(self, text, doc, offset=0) -> Tuple[List[Diagnostic], List[CodeAction]]:
