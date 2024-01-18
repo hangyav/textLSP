@@ -43,11 +43,13 @@ The following tools run on the local system:
       ```pip install git+https://github.com/PrithivirajDamodaran/Gramformer.git```
 * hf_checker: Huggingface `text2text-generation` pipline based analyser. See the [flan-t5-large-grammar-synthesis](https://huggingface.co/pszemraj/flan-t5-large-grammar-synthesis) model for an example.
    <details><summary>Models</summary>
-       * pszemraj/grammar-synthesis-small
-       * pszemraj/grammar-synthesis-large
-       * pszemraj/flan-t5-large-grammar-synthesis
-       * pszemraj/flan-t5-xl-grammar-synthesis
-       * pszemraj/bart-base-grammar-synthesis
+      <ul>
+       <li>pszemraj/grammar-synthesis-small</li>
+       <li>pszemraj/grammar-synthesis-large</li>
+       <li>pszemraj/flan-t5-large-grammar-synthesis</li>
+       <li>pszemraj/flan-t5-xl-grammar-synthesis</li>
+       <li>pszemraj/bart-base-grammar-synthesis</li>
+      </ul>
    </details>
 * hf_instruction_checker: Huggingface `text2text-generation` pipline based
 analyser using instruction tuned models. See the Grammarly's
@@ -55,13 +57,15 @@ analyser using instruction tuned models. See the Grammarly's
 error checking and text generation, such as paraphrasing, through the `%HF%`
 magic command (see the OpenAI analyser below).
    <details><summary>Models</summary>
-       * grammarly/coedit-large
-       * grammarly/coedit-xl
-       * grammarly/coedit-xl-composite
-       * grammarly/coedit-xxl
-       * jbochi/coedit-base
-       * jbochi/coedit-small
-       * jbochi/candle-coedit-quantized
+      <ul>
+       <li>grammarly/coedit-large</li>
+       <li>grammarly/coedit-xl</li>
+       <li>grammarly/coedit-xl-composite</li>
+       <li>grammarly/coedit-xxl</li>
+       <li>jbochi/coedit-base</li>
+       <li>jbochi/coedit-small</li>
+       <li>jbochi/candle-coedit-quantized</li>
+      </ul>
    </details>
 * [hf_completion](https://huggingface.co/docs/transformers/task_summary#language-modeling): Huggingface `fill-mask` pipline based text completion.
 
