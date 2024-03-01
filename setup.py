@@ -31,17 +31,17 @@ setup(
         'lsprotocol==2023.0.1',
         'language-tool-python==2.7.1',
         'tree_sitter==0.20.4',
-        'gitpython==3.1.41',
+        'gitpython==3.1.42',
         'appdirs==1.4.4',
-        'torch==2.2.0',
-        'openai==1.10.0',
-        'transformers==4.37.2',
+        'torch==2.2.1',
+        'openai==1.13.3',
+        'transformers==4.38.2',
         'sortedcontainers==2.4.0',
         'bitsandbytes==0.42.0',
     ],
     extras_require={
         'dev': [
-            'pytest==8.0.0',
+            'pytest==8.0.2',
             'python-lsp-jsonrpc==1.1.2',
             'pytest-cov==4.1.0',
             'coverage-threshold==0.4.4'
