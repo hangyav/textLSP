@@ -336,6 +336,10 @@ class TextNode():
 class TreeSitterDocument(CleanableDocument):
     LIB_PATH_TEMPLATE = '{}/treesitter/{}.so'.format(get_user_cache(), '{}')
 
+    # faster persing method is still buggy
+    CONFIGURATION_REPARSE_ALL = 'reparse_all'
+    DEFAULT_REPARSE_ALL = True
+
     def __init__(self, language_name, grammar_url, branch, *args, **kwargs):
         super().__init__(*args, **kwargs)
         #######################################################################
@@ -862,6 +866,13 @@ class TreeSitterDocument(CleanableDocument):
 
     def _apply_incremental_change(self, change: TextDocumentContentChangeEvent_Type1) -> None:
         """Apply an ``Incremental`` text change to the document"""
+        reparse_all = self.config.setdefault(
+            self.CONFIGURATION_REPARSE_ALL,
+            self.DEFAULT_REPARSE_ALL,
+        )
+        if reparse_all:
+            self._tree = None
+
         if self._tree is None:
             super()._apply_incremental_change(change)
             return
