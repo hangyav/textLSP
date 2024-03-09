@@ -9,7 +9,7 @@ def read(fname):
 
 setup(
     name="textLSP",
-    version="0.2.1",
+    version="0.3.0",
     author="Viktor Hangya",
     author_email="hangyav@gmail.com",
     description=("Language server for text spell and grammar check with various tools."),
