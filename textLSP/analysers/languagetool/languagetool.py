@@ -9,6 +9,7 @@ from lsprotocol.types import (
         Position,
         TextEdit,
         CodeAction,
+        MessageType,
 )
 from pygls.server import LanguageServer
 
@@ -20,9 +21,10 @@ from ...documents.document import BaseDocument
 logger = logging.getLogger(__name__)
 
 
-LANGUAGE_MAP = defaultdict(lambda: 'en-US')
+LANGUAGE_MAP = dict()
 LANGUAGE_MAP['en'] = 'en-US'
-LANGUAGE_MAP['en-US'] = 'en-US'
+
+DEFAULT_LANGUAGE = 'en'
 
 
 class LanguageToolAnalyser(Analyser):
@@ -175,14 +177,25 @@ class LanguageToolAnalyser(Analyser):
         self.close()
 
     def _get_mapped_language(self, language):
-        return LANGUAGE_MAP[language]
+        return LANGUAGE_MAP.get(language, language)
 
     def _get_tool_for_language(self, language):
         lang = self._get_mapped_language(language)
         if lang in self.tools:
             return self.tools[lang]
 
-        tool = LanguageTool(lang)
-        self.tools[lang] = tool
+        try:
+            tool = LanguageTool(lang)
+            self.tools[lang] = tool
+        except ValueError as e:
+            if DEFAULT_LANGUAGE in self.tools:
+                return self.tools[DEFAULT_LANGUAGE]
+
+            self.language_server.show_message(
+                f'{self.name}: unsupported language: {lang}! Using {DEFAULT_LANGUAGE}',
+                MessageType.Error,
+            )
+            tool = LanguageTool(DEFAULT_LANGUAGE)
+            self.tools[DEFAULT_LANGUAGE] = tool
 
         return tool

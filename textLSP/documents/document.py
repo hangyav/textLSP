@@ -31,12 +31,20 @@ _codec = PositionCodec()
 
 
 class BaseDocument(TextDocument):
+    CONFIGURATION_LANGUAGE = 'language'
+    DEFAULT_LANGUAGE = 'en'
+
     def __init__(self, *args, config: Dict = None, **kwargs):
         super().__init__(*args, **kwargs)
         if config is None:
             self.config = dict()
         else:
             self.config = config
+
+        self.language = self.config.get(
+            BaseDocument.CONFIGURATION_LANGUAGE,
+            BaseDocument.DEFAULT_LANGUAGE
+        )
 
     @property
     def cleaned_source(self) -> str:
@@ -45,10 +53,6 @@ class BaseDocument(TextDocument):
     @property
     def cleaned_lines(self):
         return self.cleaned_source.splitlines(True)
-
-    @property
-    def language(self) -> str:
-        return 'en'
 
     def position_at_offset(self, offset: int, cleaned=False) -> Position:
         pos = 0
@@ -1086,6 +1090,7 @@ class DocumentTypeFactory():
         language_id: Optional[str] = None,
         sync_kind=None,
     ) -> TextDocument:
+        lang = config.get(BaseDocument.CONFIGURATION_LANGUAGE)
         try:
             type = DocumentTypeFactory.get_file_type(language_id)
             cls = get_class(
@@ -1095,8 +1100,12 @@ class DocumentTypeFactory():
                 ),
                 BaseDocument,
             )
+            config = config.get(type, dict())
+            if lang is not None:
+                config[BaseDocument.CONFIGURATION_LANGUAGE] = lang
+
             return cls(
-                config=config.get(type, dict()),
+                config=config,
                 uri=doc_uri,
                 source=source,
                 version=version,
@@ -1104,8 +1113,12 @@ class DocumentTypeFactory():
                 sync_kind=sync_kind
             )
         except ImportError:
+            config = dict()
+            if lang is not None:
+                config[BaseDocument.CONFIGURATION_LANGUAGE] = lang
+
             return BaseDocument(
-                config=dict(),
+                config=config,
                 uri=doc_uri,
                 source=source,
                 version=version,
