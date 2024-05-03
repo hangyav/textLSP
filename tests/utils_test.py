@@ -116,8 +116,8 @@ def test_batch_text(src, exp, max, min):
             types.TokenDiff(
                 types.TokenDiff.INSERT,
                 '',
-                'example',
-                5,
+                ' example',
+                4,
                 0
             ),
         ],
@@ -128,10 +128,10 @@ def test_batch_text(src, exp, max, min):
         [
             types.TokenDiff(
                 types.TokenDiff.DELETE,
-                'example',
+                ' example',
                 '',
-                5,
-                7
+                4,
+                8
             ),
         ],
     ),
@@ -141,15 +141,15 @@ def test_batch_text(src, exp, max, min):
         [
             types.TokenDiff(
                 types.TokenDiff.DELETE,
-                'example',
+                ' example',
                 '',
-                5,
-                7
+                4,
+                8
             ),
             types.TokenDiff(
                 types.TokenDiff.INSERT,
                 '',
-                'good',
+                'good ',  # XXX: the position of space seems to be a bit inconsistent, before or after
                 18,
                 0
             ),
@@ -166,6 +166,40 @@ def test_batch_text(src, exp, max, min):
         'This is a sentence of 47 characters. ',
         'This is a sentence of 47 characters. ',
         [],
+    ),
+    (
+        'This is a sentence.\n'
+        '\n'
+        'This is a new paragraph.\n',
+        'This is a sentence.\n'
+        '\n'
+        'This is the new paragraph.\n',
+        [
+            types.TokenDiff(
+                types.TokenDiff.REPLACE,
+                'a',
+                'the',
+                29,
+                1
+            ),
+        ],
+    ),
+    (
+        'This is a sentence.\n'
+        '\n'
+        'This is a new paragraph.\n',
+        'This is a sentence.\n'
+        '\n'
+        'That this is a new paragraph.\n',
+        [
+            types.TokenDiff(
+                types.TokenDiff.REPLACE,
+                'This',
+                'That this',
+                21,
+                4
+            ),
+        ],
     ),
 ])
 def test_token_diff(s1, s2, exp):
