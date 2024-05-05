@@ -318,18 +318,22 @@ class TokenDiff():
     length: int
 
     @staticmethod
+    def _split(text):
+        return [item for item in re.split("(\s)", text) if item != ""]
+
+    @staticmethod
     def token_level_diff(text1, text2) -> List:
-        tokens1 = text1.split()
-        tokens2 = text2.split()
+        tokens1 = TokenDiff._split(text1)
+        tokens2 = TokenDiff._split(text2)
         diff = difflib.SequenceMatcher(None, tokens1, tokens2)
 
         return [
             TokenDiff(
                 type=item[0],
-                old_token=' '.join(tokens1[item[1]:item[2]]),
-                new_token=' '.join(tokens2[item[3]:item[4]]),
-                offset=0 if item[1] == 0 else len(' '.join(tokens1[:item[1]]))+1,
-                length=len(' '.join(tokens1[item[1]:item[2]])),
+                old_token=''.join(tokens1[item[1]:item[2]]),
+                new_token=''.join(tokens2[item[3]:item[4]]),
+                offset=0 if item[1] == 0 else len(''.join(tokens1[:item[1]])),
+                length=len(''.join(tokens1[item[1]:item[2]])),
             )
             for item in diff.get_opcodes()
             if item[0] != 'equal'

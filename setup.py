@@ -27,23 +27,23 @@ setup(
         'console_scripts': ['textlsp=textLSP.cli:main'],
     },
     install_requires=[
-        'pygls==1.3.0',
+        'pygls==1.3.1',
         'lsprotocol==2023.0.1',
-        'language-tool-python==2.7.1',
-        'tree_sitter==0.20.4',
-        'gitpython==3.1.42',
+        'language-tool-python==2.8',
+        'tree_sitter==0.21.3',
+        'gitpython==3.1.43',
         'appdirs==1.4.4',
-        'torch==2.2.1',
-        'openai==1.13.3',
-        'transformers==4.38.2',
+        'torch==2.3.0',
+        'openai==1.25.0',
+        'transformers==4.40.1',
         'sortedcontainers==2.4.0',
-        'bitsandbytes==0.42.0',
+        'bitsandbytes==0.43.1',
     ],
     extras_require={
         'dev': [
-            'pytest==8.0.2',
+            'pytest==8.2.0',
             'python-lsp-jsonrpc==1.1.2',
-            'pytest-cov==4.1.0',
+            'pytest-cov==5.0.0',
             'coverage-threshold==0.4.4'
         ]
     },

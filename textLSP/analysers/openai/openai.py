@@ -85,8 +85,12 @@ class OpenAIAnalyser(Analyser):
             model=self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL),
             temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
         )
+        logger.debug(f"Response: {res}")
+
         if len(res.choices) > 0:
-            return TokenDiff.token_level_diff(text, res.choices[0].message.content.strip())
+            # the API escapes special characters such as newlines
+            res_text = res.choices[0].message.content.strip().encode().decode("unicode_escape")
+            return TokenDiff.token_level_diff(text, res_text)
 
         return []
 
@@ -98,15 +102,20 @@ class OpenAIAnalyser(Analyser):
             temperature=self.config.get(self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE),
             max_tokens=self.config.get(self.CONFIGURATION_MAX_TOKEN, self.SETTINGS_DEFAULT_MAX_TOKEN),
         )
+        logger.debug(f"Response: {res}")
 
         if len(res.choices) > 0:
-            return res.choices[0].message.content.strip()
+            # the API escapes special characters such as newlines
+            return res.choices[0].message.content.strip().encode().decode("unicode_escape")
 
         return None
 
     def _analyse(self, text, doc, offset=0) -> Tuple[List[Diagnostic], List[CodeAction]]:
         diagnostics = list()
         code_actions = list()
+
+        # we don not want trailing whitespace
+        text = text.rstrip()
 
         try:
             edits = self._edit(text)
