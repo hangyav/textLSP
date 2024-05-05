@@ -200,6 +200,11 @@ textLSP = {
         },
     },
     documents = {
+        -- the language of the documents, could be set to `auto` of `auto:<fallback>`
+        -- to detect automatically, default: auto:en
+        language = "auto:en",
+        -- do not autodetect documents with fewer characters
+        min_length_language_detect = 20,
         org = {
             org_todo_keywords = {
                 'TODO',
