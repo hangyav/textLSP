@@ -38,6 +38,8 @@ setup(
         'transformers==4.40.1',
         'sortedcontainers==2.4.0',
         'bitsandbytes==0.43.1',
+        'cython==3.0.10',
+        'whatthelang==1.0.1',
     ],
     extras_require={
         'dev': [
