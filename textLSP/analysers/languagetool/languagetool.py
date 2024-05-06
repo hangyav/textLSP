@@ -1,7 +1,6 @@
 import logging
 
 from typing import List, Tuple
-from collections import defaultdict
 from language_tool_python import LanguageTool
 from lsprotocol.types import (
         Diagnostic,
@@ -9,6 +8,7 @@ from lsprotocol.types import (
         Position,
         TextEdit,
         CodeAction,
+        MessageType,
 )
 from pygls.server import LanguageServer
 
@@ -20,15 +20,17 @@ from ...documents.document import BaseDocument
 logger = logging.getLogger(__name__)
 
 
-LANGUAGE_MAP = defaultdict(lambda: 'en-US')
+LANGUAGE_MAP = dict()
 LANGUAGE_MAP['en'] = 'en-US'
-LANGUAGE_MAP['en-US'] = 'en-US'
+
+DEFAULT_LANGUAGE = 'en'
 
 
 class LanguageToolAnalyser(Analyser):
     def __init__(self, language_server: LanguageServer, config: dict, name: str):
         super().__init__(language_server, config, name)
         self.tools = dict()
+        self._tool_backoff = dict()
 
     def _analyse(self, text, doc, offset=0) -> Tuple[List[Diagnostic], List[CodeAction]]:
         diagnostics = list()
@@ -163,8 +165,20 @@ class LanguageToolAnalyser(Analyser):
         tool_langs = set(self.tools.keys())
 
         for lang in tool_langs - doc_langs:
-            self.tools[lang].close()
-            del self.tools[lang]
+            if any(
+                lang2 in doc_langs
+                for lang2, backoff in self._tool_backoff.items()
+                if backoff == lang
+            ):
+                # do not close a language that is still used by other languages as backoff
+                # XXX: not the most efficient but assuming there's not a lot of backed-off
+                # languages around, this should be fast
+                continue
+
+
+            if lang in self.tools:
+                self.tools[lang].close()
+                del self.tools[lang]
 
     def close(self):
         for lang, tool in self.tools.items():
@@ -175,14 +189,28 @@ class LanguageToolAnalyser(Analyser):
         self.close()
 
     def _get_mapped_language(self, language):
-        return LANGUAGE_MAP[language]
+        return LANGUAGE_MAP.get(language, language)
 
     def _get_tool_for_language(self, language):
         lang = self._get_mapped_language(language)
         if lang in self.tools:
             return self.tools[lang]
+        if lang in self._tool_backoff and self._tool_backoff[lang] in self.tools:
+            return self.tools[self._tool_backoff[lang]]
 
-        tool = LanguageTool(lang)
-        self.tools[lang] = tool
+        try:
+            tool = LanguageTool(lang)
+            self.tools[lang] = tool
+        except ValueError:
+            self.language_server.show_message(
+                f'{self.name}: unsupported language: {lang}! Using {DEFAULT_LANGUAGE}',
+                MessageType.Error,
+            )
+
+            if lang == DEFAULT_LANGUAGE:
+                return ValueError("We shouldn't get here")
+
+            tool = self._get_tool_for_language(DEFAULT_LANGUAGE)
+            self._tool_backoff[lang] = DEFAULT_LANGUAGE
 
         return tool

@@ -1,42 +1,87 @@
-import logging
-import tempfile
-import sys
 import copy
-
-from typing import Optional, Generator, List, Dict
+import logging
+import sys
+import tempfile
 from dataclasses import dataclass
 from itertools import chain
+from typing import Dict, Generator, List, Optional
 
+import langdetect
 from lsprotocol.types import (
-    Range,
     Position,
+    Range,
     TextDocumentContentChangeEvent,
     TextDocumentContentChangeEvent_Type1,
     TextDocumentContentChangeEvent_Type2,
 )
 from pygls.workspace import TextDocument
 from pygls.workspace.position_codec import PositionCodec
-from tree_sitter import Language, Parser, Tree, Node
+from tree_sitter import Language, Node, Parser, Tree
 
-from ..utils import get_class, synchronized, git_clone, get_user_cache
-from ..types import (
-    OffsetPositionInterval,
-    OffsetPositionIntervalList,
-    Interval
-)
 from .. import documents
+from ..types import Interval, OffsetPositionInterval, OffsetPositionIntervalList
+from ..utils import get_class, get_user_cache, git_clone, synchronized
 
 logger = logging.getLogger(__name__)
 _codec = PositionCodec()
+langdetect.DetectorFactory.seed = 42
 
 
 class BaseDocument(TextDocument):
+    AUTO_LANG = 'auto'
+
+    CONFIGURATION_LANGUAGE = 'language'
+    CONFIGURATION_MIN_LANG_DETECT = 'min_length_language_detect'
+
+    DEFAULT_LANGUAGE = 'auto:en'
+    DEFAULT_NATURAL_LANGUAGE = 'en'
+    DEFAULT_MIN_LANG_DETECT = 20
+
     def __init__(self, *args, config: Dict = None, **kwargs):
         super().__init__(*args, **kwargs)
         if config is None:
             self.config = dict()
         else:
             self.config = config
+
+        self._language = None
+
+    @property
+    def language(self) -> str:
+        if self._language is None:
+            self._update_langauge(
+                self.config.get(
+                    BaseDocument.CONFIGURATION_LANGUAGE, BaseDocument.DEFAULT_LANGUAGE
+                )
+            )
+            logger.debug(f"Language ({self.uri}): {self._language}")
+
+        return self._language
+
+    def _update_langauge(self, lang: str):
+        """
+        Parameters:
+            lang: str -- Language code or `auto` for automatic language detection.
+                         Optionally: `auto:<default>` such as `auto:en`, to set fallback
+                         language in case the content is too short.
+        """
+        lang = lang.split(':')
+        default_lang = BaseDocument.DEFAULT_NATURAL_LANGUAGE
+
+        if len(lang) > 1:
+            default_lang = lang[1]
+        lang = lang[0]
+
+        if lang == BaseDocument.AUTO_LANG:
+            if len(self.cleaned_source) >= self.config.get(
+                BaseDocument.CONFIGURATION_MIN_LANG_DETECT, BaseDocument.DEFAULT_MIN_LANG_DETECT
+            ):
+                lang = langdetect.detect(self.cleaned_source)
+            else:
+                lang = default_lang
+
+        self._language = lang
+
 
     @property
     def cleaned_source(self) -> str:
@@ -45,10 +90,6 @@ class BaseDocument(TextDocument):
     @property
     def cleaned_lines(self):
         return self.cleaned_source.splitlines(True)
-
-    @property
-    def language(self) -> str:
-        return 'en'
 
     def position_at_offset(self, offset: int, cleaned=False) -> Position:
         pos = 0
@@ -344,12 +385,12 @@ class TreeSitterDocument(CleanableDocument):
         super().__init__(*args, **kwargs)
         #######################################################################
         # Do not deepcopy these
-        self._language = self.get_language(language_name, grammar_url, branch)
-        self._parser = self.get_parser(
+        self._ts_language = self.get_language(language_name, grammar_url, branch)
+        self._ts_parser = self.get_parser(
             language_name,
             grammar_url,
             branch,
-            self._language
+            self._ts_language
         )
         self._tree = None
         self._query = self._build_query()
@@ -362,7 +403,7 @@ class TreeSitterDocument(CleanableDocument):
         result = cls.__new__(cls)
         memo[id(self)] = result
         for k, v in self.__dict__.items():
-            if k not in {'_language', '_parser', '_tree', '_query'}:
+            if k not in {'_ts_language', '_ts_parser', '_tree', '_query'}:
                 setattr(result, k, copy.deepcopy(v, memo))
             else:
                 setattr(result, k, v)
@@ -405,7 +446,7 @@ class TreeSitterDocument(CleanableDocument):
         raise NotImplementedError()
 
     def _parse_source(self):
-        return self._parser.parse(bytes(self.source, 'utf-8'))
+        return self._ts_parser.parse(bytes(self.source, 'utf-8'))
 
     @property
     def tree(self) -> Tree:
@@ -913,7 +954,7 @@ class TreeSitterDocument(CleanableDocument):
         )
         super()._apply_incremental_change(change)
         new_source = bytes(self.source, 'utf-8')
-        self._tree = self._parser.parse(
+        self._tree = self._ts_parser.parse(
             new_source,
             tree
         )
@@ -1086,6 +1127,8 @@ class DocumentTypeFactory():
         language_id: Optional[str] = None,
         sync_kind=None,
     ) -> TextDocument:
+        lang = config.get(BaseDocument.CONFIGURATION_LANGUAGE)
+        min_len = config.get(BaseDocument.CONFIGURATION_MIN_LANG_DETECT)
         try:
             type = DocumentTypeFactory.get_file_type(language_id)
             cls = get_class(
@@ -1095,8 +1138,18 @@ class DocumentTypeFactory():
                 ),
                 BaseDocument,
             )
+
+            config = config.get(type, dict())
+            if lang is not None and BaseDocument.CONFIGURATION_LANGUAGE not in config:
+                config[BaseDocument.CONFIGURATION_LANGUAGE] = lang
+            if (
+                min_len is not None
+                and BaseDocument.CONFIGURATION_MIN_LANG_DETECT not in config
+            ):
+                config[BaseDocument.CONFIGURATION_MIN_LANG_DETECT] = min_len
+
             return cls(
-                config=config.get(type, dict()),
+                config=config,
                 uri=doc_uri,
                 source=source,
                 version=version,
@@ -1104,8 +1157,14 @@ class DocumentTypeFactory():
                 sync_kind=sync_kind
             )
         except ImportError:
+            config = dict()
+            if lang is not None:
+                config[BaseDocument.CONFIGURATION_LANGUAGE] = lang
+            if min_len is not None:
+                config[BaseDocument.CONFIGURATION_MIN_LANG_DETECT] = min_len
+
             return BaseDocument(
-                config=dict(),
+                config=config,
                 uri=doc_uri,
                 source=source,
                 version=version,

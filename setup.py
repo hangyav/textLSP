@@ -38,6 +38,7 @@ setup(
         'transformers==4.40.1',
         'sortedcontainers==2.4.0',
         'bitsandbytes==0.43.1',
+        'langdetect==1.0.9',
     ],
     extras_require={
         'dev': [

@@ -530,3 +530,26 @@ def test_updates(content, edits, exp):
         tracker.update_document(edit, doc)
 
     assert tracker.get_changes() == exp
+
+
+@pytest.mark.parametrize(
+    "content,lang,exp",
+    [
+        ("This is a document. It has more than twenty characters in it.", "en", "en"),
+        ("This is a document. It has more than twenty characters in it.", "de", "de"),
+        ("too short to detect", "auto:en", "en"),
+        ("too short to detect", "auto:de", "de"),
+        ("too short to detect", "auto", BaseDocument.DEFAULT_NATURAL_LANGUAGE),
+        ("too short to detect", None, BaseDocument.DEFAULT_NATURAL_LANGUAGE),
+        ("This is a document. It has more than twenty characters in it.", "auto", "en"),
+        ("Das ist ein Dokument. Es enthält mehr als zwanzig Zeichen.", "auto", "de"),
+    ],
+)
+def test_document_language(content, lang, exp):
+    if lang is not None:
+        config = {BaseDocument.CONFIGURATION_LANGUAGE: lang}
+    else:
+        config = None
+    doc = BaseDocument("DUMMY_URL", content, config=config)
+
+    assert doc.language == exp

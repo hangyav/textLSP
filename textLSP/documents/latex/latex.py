@@ -58,7 +58,7 @@ class LatexDocument(TreeSitterDocument):
         for root in self.NEWLINE_BEFORE_AFTER:
             query_str += f'({root}) @{self.NODE_NEWLINE_BEFORE_AFTER}\n'
 
-        return self._language.query(query_str)
+        return self._ts_language.query(query_str)
 
     def _iterate_text_nodes(
             self,

@@ -68,7 +68,7 @@ class MarkDownDocument(TreeSitterDocument):
         for root in self.NEWLINE_AFTER_TWO:
             query_str += f'({root}) @{self.NODE_NEWLINE_AFTER_TWO}\n'
 
-        return self._language.query(query_str)
+        return self._ts_language.query(query_str)
 
     def _iterate_text_nodes(
             self,
