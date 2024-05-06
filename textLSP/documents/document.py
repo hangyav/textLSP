@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from itertools import chain
 from typing import Dict, Generator, List, Optional
 
+import langdetect
 from lsprotocol.types import (
     Position,
     Range,
@@ -16,7 +17,6 @@ from lsprotocol.types import (
 from pygls.workspace import TextDocument
 from pygls.workspace.position_codec import PositionCodec
 from tree_sitter import Language, Node, Parser, Tree
-from whatthelang import WhatTheLang
 
 from .. import documents
 from ..types import Interval, OffsetPositionInterval, OffsetPositionIntervalList
@@ -24,6 +24,7 @@ from ..utils import get_class, get_user_cache, git_clone, synchronized
 
 logger = logging.getLogger(__name__)
 _codec = PositionCodec()
+langdetect.DetectorFactory.seed = 42
 
 
 class BaseDocument(TextDocument):
@@ -35,8 +36,6 @@ class BaseDocument(TextDocument):
     DEFAULT_LANGUAGE = 'auto:en'
     DEFAULT_NATURAL_LANGUAGE = 'en'
     DEFAULT_MIN_LANG_DETECT = 20
-
-    _whatthelang = None
 
     def __init__(self, *args, config: Dict = None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -77,10 +76,7 @@ class BaseDocument(TextDocument):
             if len(self.cleaned_source) >= self.config.get(
                 BaseDocument.CONFIGURATION_MIN_LANG_DETECT, BaseDocument.DEFAULT_MIN_LANG_DETECT
             ):
-                if BaseDocument._whatthelang is None:
-                    BaseDocument._whatthelang = WhatTheLang()
-
-                lang = BaseDocument._whatthelang.predict_lang(self.cleaned_source)
+                lang = langdetect.detect(self.cleaned_source)
             else:
                 lang = default_lang
 
