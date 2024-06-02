@@ -30,7 +30,7 @@ setup(
         'pygls==1.3.1',
         'lsprotocol==2023.0.1',
         'language-tool-python==2.8',
-        'tree_sitter==0.21.3',
+        'tree_sitter==0.22.3',
         'gitpython==3.1.43',
         'appdirs==1.4.4',
         'torch==2.3.0',
