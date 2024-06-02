@@ -49,7 +49,7 @@ class BaseDocument(TextDocument):
     @property
     def language(self) -> str:
         if self._language is None:
-            self._update_langauge(
+            self._update_language(
                 self.config.get(
                     BaseDocument.CONFIGURATION_LANGUAGE, BaseDocument.DEFAULT_LANGUAGE
                 )
@@ -58,7 +58,7 @@ class BaseDocument(TextDocument):
 
         return self._language
 
-    def _update_langauge(self, lang: str):
+    def _update_language(self, lang: str):
         """
         Parameters:
             lang: str -- Language code or `auto` for automatic language detection.
@@ -596,7 +596,7 @@ class TreeSitterDocument(CleanableDocument):
             old_first_interval_end_point = (0, 0)
         if start_point < old_first_interval_end_point:
             # there's new content at the beginning, we need to parse the next
-            # subtree as well, since there are no necesary whitespace tokens in
+            # subtree as well, since there are no necessary whitespace tokens in
             # the current text_intervals
             tmp_point = old_tree_first_node_new_end_point
         else:
@@ -888,7 +888,7 @@ class TreeSitterDocument(CleanableDocument):
             last_changed_point
         )
         if last_idx+1 >= len(self._text_intervals):
-            # we are actully at the end of the file so add the final newline
+            # we are actually at the end of the file so add the final newline
             text_intervals.add_interval(new_intervals[-1])
         else:
             self._handle_intervals_after_edit_shifted(

@@ -82,7 +82,7 @@ class HFCompletionAnalyser(Analyser):
         # in the file might not be mapped to the cleaned_source which leads to
         # unexpected behaviour
         uncleaned_offset = max(0, doc.offset_at_position(params.position)-1)
-        # XXX: this still get's activated in e.g. commented lines
+        # XXX: this still gets activated in e.g. commented lines
         if doc.source[uncleaned_offset] in {' ', '\n'}:
             return self._get_text_completions(paragraph, in_paragraph_offset)
 

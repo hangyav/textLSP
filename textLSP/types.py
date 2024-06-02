@@ -171,7 +171,7 @@ class OffsetPositionIntervalList():
 
     def get_idx_at_position(self, position: Position, strict=True) -> int:
         """
-        :param strict: If Flase, return the idx of the next (or last) interval if does not exist
+        :param strict: If False, return the idx of the next (or last) interval if does not exist
         """
         idx = bisect.bisect_left(self._position_end_line, position.line)
         length = len(self)
@@ -209,7 +209,7 @@ class OffsetPositionIntervalList():
 
     def get_interval_at_position(self, position: Position, strict=True) -> OffsetPositionInterval:
         """
-        :param strict: If Flase, return the object of the next (or last) interval if does not exist
+        :param strict: If False, return the object of the next (or last) interval if does not exist
         """
         idx = self.get_idx_at_position(position, strict)
         if idx is None:
