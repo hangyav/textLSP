@@ -37,10 +37,10 @@ _This tool is in early development._
 The following tools run on the local system:
 
 * [LanguageTool](https://languagetool.org): Mainly for development purposes, see [ltex-ls](https://github.com/valentjn/ltex-ls) for a more mature implementation.
-* [Gramformer](https://github.com/PrithivirajDamodaran/Gramformer): Neural network based system.
-    * Gramformer needs to be installed manually:
-
-      ```pip install git+https://github.com/PrithivirajDamodaran/Gramformer.git```
+* [Ollama](https://www.ollama.com): Run LLMs efficiently on your local machine.
+        It supports diagnostics, code actions and prompt based text generation.
+    * Ollama needs to be [installed manually](https://www.ollama.com/download) first.
+    * Various [LLMs](https://www.ollama.com/library) are supported, such as `Llama 3`, `Gemma` or `Mixtra`. Suggested model is `Phi3`, due to its speed, size and accuracy.
 * hf_checker: Huggingface `text2text-generation` pipline based analyser. See the [flan-t5-large-grammar-synthesis](https://huggingface.co/pszemraj/flan-t5-large-grammar-synthesis) model for an example.
    <details><summary>Models</summary>
       <ul>
@@ -68,6 +68,10 @@ magic command (see the OpenAI analyser below).
       </ul>
    </details>
 * [hf_completion](https://huggingface.co/docs/transformers/task_summary#language-modeling): Huggingface `fill-mask` pipline based text completion.
+* [Gramformer](https://github.com/PrithivirajDamodaran/Gramformer): Neural network based system.
+    * Gramformer needs to be installed manually:
+
+      ```pip install git+https://github.com/PrithivirajDamodaran/Gramformer.git```
 
 ### Tools using remote services
 
@@ -135,6 +139,17 @@ textLSP = {
                 on_change = false,
             }
         },
+        ollama = {
+          enabled = true,
+          check_text = {
+            on_open = false,
+            on_save = true,
+            on_change = false,
+          },
+          model = "phi3:3.8b-instruct",  -- smaller but faster model
+          -- model = "phi3:14b-instruct",  -- more accurate
+          max_token = 50,
+        },
         gramformer = {
             -- gramformer dependency needs to be installed manually
             enabled = false,
@@ -158,7 +173,7 @@ textLSP = {
             }
         },
         hf_instruction_checker = {
-            enabled = true,
+            enabled = false,
             gpu = false,
             quantize=32,
             model='grammarly/coedit-large',
@@ -170,7 +185,7 @@ textLSP = {
             }
         },
         hf_completion = {
-            enabled = true,
+            enabled = false,
             gpu = false,
             quantize=32,
             model='bert-base-multilingual-cased',
