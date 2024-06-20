@@ -39,6 +39,7 @@ setup(
         'sortedcontainers==2.4.0',
         'bitsandbytes==0.43.1',
         'langdetect==1.0.9',
+        'ollama==0.2.0',
     ],
     extras_require={
         'dev': [
