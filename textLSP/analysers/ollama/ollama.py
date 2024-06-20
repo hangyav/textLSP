@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional, Tuple
 
-import ollama
+from httpx import ConnectError
 from lsprotocol.types import (
     CodeAction,
     CodeActionParams,
@@ -20,8 +20,10 @@ from lsprotocol.types import (
 )
 from pygls.server import LanguageServer
 
+import ollama
+
 from ...documents.document import BaseDocument
-from ...types import Interval, ProgressBar, TokenDiff
+from ...types import ConfigurationError, Interval, ProgressBar, TokenDiff
 from ..analyser import Analyser
 
 logger = logging.getLogger(__name__)
@@ -37,12 +39,16 @@ class OllamaAnalyser(Analyser):
 
     SETTINGS_DEFAULT_MODEL = "phi3:14b-instruct"
     SETTINGS_DEFAULT_KEEP_ALIVE = "10m"
-    SETTINGS_DEFAULT_EDIT_INSTRUCTION = "Fix spelling and grammar errors of the input sentence. Print only the the corrected sentence. Input: "
+    SETTINGS_DEFAULT_EDIT_INSTRUCTION = (
+        "Fix spelling and grammar errors of the"
+        " input sentence. Print only the"
+        " the corrected sentence even if it is correct. Input: "
+    )
     SETTINGS_DEFAULT_TEMPERATURE = 0
     SETTINGS_DEFAULT_MAX_TOKEN = 50
     SETTINGS_DEFAULT_PROMPT_MAGIC = "%OLLAMA% "
     SETTINGS_DEFAULT_CHECK_ON = {
-        Analyser.CONFIGURATION_CHECK_ON_OPEN: True,
+        Analyser.CONFIGURATION_CHECK_ON_OPEN: False,
         Analyser.CONFIGURATION_CHECK_ON_CHANGE: False,
         Analyser.CONFIGURATION_CHECK_ON_SAVE: True,
     }
@@ -51,22 +57,34 @@ class OllamaAnalyser(Analyser):
         super().__init__(language_server, config, name)
 
         try:
-            # lets test if the model is available
-            self._generate(
-                prompt="test",
-                options={"num_predict": 1},
+            # test if the server is running
+            ollama.list()
+        except ConnectError:
+            raise ConfigurationError(
+                "Ollama server is not running. Start it manually and restart textLSP."
+                "To install Ollama see: https://ollama.com/download"
+            )
+
+        try:
+            # test if the model is available
+            ollama.show(
+                self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL),
             )
         except ollama.ResponseError:
-            with ProgressBar(
-                self.language_server,
-                f"{self.name} downloading {self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL)}",
-                token=self._progressbar_token,
-            ):
-                ollama.pull(
-                    self.config.get(
-                        self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL
+            try:
+                with ProgressBar(
+                    self.language_server,
+                    f"{self.name} downloading {self.config.get(self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL)}",
+                    token=self._progressbar_token,
+                ):
+                    ollama.pull(
+                        self.config.get(
+                            self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL
+                        )
                     )
-                )
+            except Exception as e:
+                logger.exception(e, stack_info=True)
+                raise ConfigurationError(f"{self.name}: {e}")
 
     def _generate(self, prompt, options=None, keep_alive=None):
         logger.debug(f"Generating for input: {prompt}")
@@ -115,7 +133,7 @@ class OllamaAnalyser(Analyser):
         if res is None:
             return [], []
 
-        edits = TokenDiff.token_level_diff(text, res['response'].strip())
+        edits = TokenDiff.token_level_diff(text, res["response"].strip())
 
         for edit in edits:
             if edit.type == TokenDiff.INSERT:
@@ -186,18 +204,18 @@ class OllamaAnalyser(Analyser):
         code_actions = list()
         checked = set()
         for change in changes:
-            paragraph = doc.paragraph_at_offset(
+            for paragraph in doc.paragraphs_at_offset(
                 change.start,
                 min_offset=change.start + change.length - 1,
                 cleaned=True,
-            )
-            if paragraph in checked:
-                continue
+            ):
+                if paragraph in checked:
+                    continue
 
-            diags, actions = self._handle_paragraph(doc, paragraph)
-            diagnostics.extend(diags)
-            code_actions.extend(actions)
-            checked.add(paragraph)
+                diags, actions = self._handle_paragraph(doc, paragraph)
+                diagnostics.extend(diags)
+                code_actions.extend(actions)
+                checked.add(paragraph)
 
         self.add_diagnostics(doc, diagnostics)
         self.add_code_actions(doc, code_actions)
