@@ -41,7 +41,7 @@ The following tools run on the local system:
         It supports diagnostics, code actions and prompt based text generation.
     * Ollama needs to be [installed manually](https://www.ollama.com/download) first.
     * Various [LLMs](https://www.ollama.com/library) are supported, such as `Llama 3`, `Gemma` or `Mixtra`. Suggested model is `Phi3`, due to its speed, size and accuracy.
-* hf_checker: Huggingface `text2text-generation` pipline based analyser. See the [flan-t5-large-grammar-synthesis](https://huggingface.co/pszemraj/flan-t5-large-grammar-synthesis) model for an example.
+* hf_checker: Huggingface `text2text-generation` pipeline based analyser. See the [flan-t5-large-grammar-synthesis](https://huggingface.co/pszemraj/flan-t5-large-grammar-synthesis) model for an example.
    <details><summary>Models</summary>
       <ul>
        <li>pszemraj/grammar-synthesis-small</li>
@@ -51,7 +51,7 @@ The following tools run on the local system:
        <li>pszemraj/bart-base-grammar-synthesis</li>
       </ul>
    </details>
-* hf_instruction_checker: Huggingface `text2text-generation` pipline based
+* hf_instruction_checker: Huggingface `text2text-generation` pipeline based
 analyser using instruction tuned models. See the Grammarly's
 [CoEdIT](https://github.com/vipulraheja/coedit) model for an example. Supports
 error checking and text generation, such as paraphrasing, through the `%HF%`
@@ -67,7 +67,7 @@ magic command (see the OpenAI analyser below).
        <li>jbochi/candle-coedit-quantized</li>
       </ul>
    </details>
-* [hf_completion](https://huggingface.co/docs/transformers/task_summary#language-modeling): Huggingface `fill-mask` pipline based text completion.
+* [hf_completion](https://huggingface.co/docs/transformers/task_summary#language-modeling): Huggingface `fill-mask` pipeline based text completion.
 * [Gramformer](https://github.com/PrithivirajDamodaran/Gramformer): Neural network based system.
     * Gramformer needs to be installed manually:
 

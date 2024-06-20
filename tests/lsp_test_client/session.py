@@ -159,7 +159,7 @@ class LspSession(MethodDispatcher):
         return fut.result()
 
     def text_document_definition(self, definition_params):
-        """Sends text document defintion request to LSP server."""
+        """Sends text document definition request to LSP server."""
         fut = self._send_request(
             "textDocument/definition", params=definition_params
         )

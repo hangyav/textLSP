@@ -50,7 +50,7 @@ class OpenAIAnalyser(Analyser):
     def __init__(self, language_server: LanguageServer, config: dict, name: str):
         super().__init__(language_server, config, name)
         if self.CONFIGURATION_API_KEY not in self.config:
-            raise ConfigurationError(f'Reqired parameter: {name}.{self.CONFIGURATION_API_KEY}')
+            raise ConfigurationError(f'Required parameter: {name}.{self.CONFIGURATION_API_KEY}')
         self._client = OpenAI(api_key=self.config[self.CONFIGURATION_API_KEY])
 
     def _chat_endpoint(

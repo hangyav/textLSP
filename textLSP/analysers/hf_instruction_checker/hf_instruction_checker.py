@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 class HFInstructionCheckerAnalyser(HFCheckerAnalyser):
-    CONFIGURATION_INSTRUCITON = 'instruction'
+    CONFIGURATION_INSTRUCTION = 'instruction'
     CONFIGURATION_PROMPT_MAGIC = 'prompt_magic'
 
     SETTINGS_DEFAULT_INSTRUCTION = 'Fix the grammar:'
@@ -36,12 +36,12 @@ class HFInstructionCheckerAnalyser(HFCheckerAnalyser):
     def __init__(self, language_server: LanguageServer, config: dict, name: str):
         super().__init__(language_server, config, name)
 
-        instruction = self.config.get(self.CONFIGURATION_INSTRUCITON, self.SETTINGS_DEFAULT_INSTRUCTION)
+        instruction = self.config.get(self.CONFIGURATION_INSTRUCTION, self.SETTINGS_DEFAULT_INSTRUCTION)
         if instruction is None:
-            self.config[self.CONFIGURATION_INSTRUCITON] = ''
+            self.config[self.CONFIGURATION_INSTRUCTION] = ''
 
     def corrector(self, text):
-        instruction = self.config.get(self.CONFIGURATION_INSTRUCITON, self.SETTINGS_DEFAULT_INSTRUCTION)
+        instruction = self.config.get(self.CONFIGURATION_INSTRUCTION, self.SETTINGS_DEFAULT_INSTRUCTION)
         inp = f'{instruction} {text}' if len(instruction) > 0 else text
 
         return self._corrector(inp)

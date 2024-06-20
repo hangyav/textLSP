@@ -40,7 +40,7 @@ class GrammarBotAnalyser(Analyser):
         # TODO save this somewhere
         self._remaining_requests = None
         if GrammarBotAnalyser.CONFIGURATION_API_KEY not in self.config:
-            raise ConfigurationError('Reqired parameter: grammarbot.api_key')
+            raise ConfigurationError('Required parameter: grammarbot.api_key')
         self._headers = {
             'content-type': 'application/x-www-form-urlencoded',
             'X-RapidAPI-Key': self.config[GrammarBotAnalyser.CONFIGURATION_API_KEY],
