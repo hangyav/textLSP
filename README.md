@@ -1,13 +1,14 @@
 # textLSP
+
 Language server for text spell and grammar check with various AI tools.
 
 _This tool is in early development._
 
 ![textLSP](https://user-images.githubusercontent.com/414596/219856412-8095caa5-9ce6-49fe-9713-78d234837ac4.png)
 
-# Features
+## Features
 
-## LSP features
+### LSP features
 
 * Diagnostics:
     * spelling or grammatical errors
@@ -78,6 +79,9 @@ The following tools use remote text APIs.
 Due to potential costs turning off automatic analysis if suggested.
 
 * [OpenAI](https://openai.com/api): Supports text correction as well as text generation through a magic command in the text file.
+  * A custom URL can be set to use an OpenAI-compatible server. See the example
+        [configuration](#configuration) below.
+
     <details><summary>Generation showcase</summary>
         <img src="https://user-images.githubusercontent.com/414596/219856479-b85b5c2d-6158-44be-9063-12254b76e39c.gif" height=80% width=80%/>
     </details>
@@ -90,9 +94,9 @@ Due to potential costs turning off automatic analysis if suggested.
 * markdown
 * any other file types as plain text
 
-# Setup
+## Setup
 
-## Install
+### Install
 ```
 pip install textLSP
 ```
@@ -102,7 +106,7 @@ For the latest version:
 pip install git+https://github.com/hangyav/textLSP
 ```
 
-### Additional dependencies
+#### Additional dependencies
 Some analyzers need additional dependencies!
 
 * hf_checker, hf_instruction_checker and hf_completion:
@@ -115,7 +119,7 @@ pip install textLSP[transformers]
 pip install git+https://github.com/PrithivirajDamodaran/Gramformer.git
 ```
 
-## Running
+### Running
 Simply run:
 ```
 textlsp
@@ -130,7 +134,7 @@ or simply over ssh (with ssh key) if the client doesn't support it:
 ssh <server> textlsp
 ```
 
-## Configuration
+### Configuration
 
 Using textLSP within an editor depends on the editor of choice.
 For a few examples how to set up language servers in general in some of the popular editors see [here](https://github.com/openlawlibrary/pygls/tree/master/examples/hello-world#editor-configurations) or take a look at the related documentation of your editor.
@@ -204,6 +208,7 @@ textLSP = {
         openai = {
             enabled = false,
             api_key = '<MY_API_KEY>',
+            -- url = '<CUSTOM_URL>'  -- optional to use an OpenAI-compatible server
             check_text = {
                 on_open = false,
                 on_save = false,
