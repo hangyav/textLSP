@@ -59,12 +59,12 @@ class AnalyserHandler():
                         )
                 except ImportError as e:
                     self.language_server.show_message(
-                        str(e),
+                        f"Error ({name}): {str(e)}",
                         MessageType.Error,
                     )
                 except ConfigurationError as e:
                     self.language_server.show_message(
-                        str(e),
+                        f"Error ({name}): {str(e)}",
                         MessageType.Error,
                     )
 

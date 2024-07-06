@@ -1,7 +1,12 @@
-import torch
-
 from textLSP.types import ConfigurationError
 
+try:
+    import torch
+except ModuleNotFoundError:
+    raise ConfigurationError(
+        "Dependencies are missing for torch-based modules. Please look at textLSP's"
+        " documentation for installing additional dependencies."
+    )
 
 def get_device(use_gpu: bool):
     if isinstance(use_gpu, str):
