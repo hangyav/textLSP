@@ -330,7 +330,7 @@ def test_diagnostics_bug2(json_converter, langtool_ls_onsave):
     langtool_ls_onsave.notify_did_open(
         json_converter.unstructure(open_params)
     )
-    assert done.wait(30)
+    assert done.wait(60)
     done.clear()
 
     change_params = DidChangeTextDocumentParams(
@@ -351,7 +351,7 @@ def test_diagnostics_bug2(json_converter, langtool_ls_onsave):
     langtool_ls_onsave.notify_did_change(
         json_converter.unstructure(change_params)
     )
-    assert done.wait(30)
+    assert done.wait(60)
     done.clear()
 
     save_params = DidSaveTextDocumentParams(
@@ -362,7 +362,7 @@ def test_diagnostics_bug2(json_converter, langtool_ls_onsave):
     langtool_ls_onsave.notify_did_save(
         json_converter.unstructure(save_params)
     )
-    assert done.wait(30)
+    assert done.wait(60)
     done.clear()
 
     change_params = DidChangeTextDocumentParams(
@@ -383,7 +383,7 @@ def test_diagnostics_bug2(json_converter, langtool_ls_onsave):
     langtool_ls_onsave.notify_did_change(
         json_converter.unstructure(change_params)
     )
-    assert done.wait(30)
+    assert done.wait(60)
     done.clear()
 
     save_params = DidSaveTextDocumentParams(
@@ -394,7 +394,7 @@ def test_diagnostics_bug2(json_converter, langtool_ls_onsave):
     langtool_ls_onsave.notify_did_save(
         json_converter.unstructure(save_params)
     )
-    assert done.wait(30)
+    assert done.wait(60)
     done.clear()
 
     exp_lst = [

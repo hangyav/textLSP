@@ -4,9 +4,10 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    ignore:
+      # no longer supports compilation but most packages are not in pypi yet (#29)
+      - dependency-name: "tree_sitter"
     groups:
       python-packages:
         patterns:
           - "*"
-        exclude-patterns:
-          - "tree_sitter"

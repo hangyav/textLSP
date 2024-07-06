@@ -2,10 +2,10 @@ install:
 	pip install .
 
 install-development:
-	pip install -e .[dev]
+	pip install -e .[dev,transformers]
 
 install-test:
-	pip install .[dev]
+	pip install .[dev,transformers]
 
 uninstall:
 	pip uninstall textLSP
