@@ -29,14 +29,14 @@ setup(
     install_requires=[
         'pygls==1.3.1',
         'lsprotocol==2023.0.1',
-        'language-tool-python==2.8',
+        'language-tool-python==2.8.1',
         'tree_sitter==0.21.3',
         'gitpython==3.1.43',
         'appdirs==1.4.4',
-        'openai==1.37.1',
+        'openai==1.43.0',
         'sortedcontainers==2.4.0',
         'langdetect==1.0.9',
-        'ollama==0.3.1',
+        'ollama==0.3.2',
     ],
     extras_require={
         'dev': [
@@ -47,7 +47,7 @@ setup(
         ],
         'transformers': [
             'torch==2.4.0',
-            'transformers==4.43.3',
+            'transformers==4.44.2',
             'bitsandbytes==0.43.3',
         ],
     },
