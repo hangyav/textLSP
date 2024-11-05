@@ -33,7 +33,7 @@ setup(
         'tree_sitter==0.21.3',
         'gitpython==3.1.43',
         'appdirs==1.4.4',
-        'openai==1.50.2',
+        'openai==1.53.0',
         'sortedcontainers==2.4.0',
         'langdetect==1.0.9',
         'ollama==0.3.3',
@@ -42,12 +42,12 @@ setup(
         'dev': [
             'pytest==8.3.3',
             'python-lsp-jsonrpc==1.1.2',
-            'pytest-cov==5.0.0',
+            'pytest-cov==6.0.0',
             'coverage-threshold==0.5.0'
         ],
         'transformers': [
-            'torch==2.4.1',
-            'transformers==4.45.1',
+            'torch==2.5.1',
+            'transformers==4.46.1',
             'bitsandbytes==0.44.1',
         ],
     },
