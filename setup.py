@@ -33,10 +33,10 @@ setup(
         'tree_sitter==0.21.3',
         'gitpython==3.1.43',
         'appdirs==1.4.4',
-        'openai==1.55.3',
+        'openai==1.58.1',
         'sortedcontainers==2.4.0',
         'langdetect==1.0.9',
-        'ollama==0.4.2',
+        'ollama==0.4.5',
     ],
     extras_require={
         'dev': [
@@ -47,8 +47,8 @@ setup(
         ],
         'transformers': [
             'torch==2.5.1',
-            'transformers==4.46.3',
-            'bitsandbytes==0.44.1',
+            'transformers==4.47.1',
+            'bitsandbytes==0.45.0',
         ],
     },
 )
