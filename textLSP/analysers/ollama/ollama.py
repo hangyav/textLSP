@@ -1,7 +1,6 @@
 import logging
 from typing import List, Optional, Tuple
 
-from httpx import ConnectError
 from lsprotocol.types import (
     CodeAction,
     CodeActionParams,
@@ -59,7 +58,7 @@ class OllamaAnalyser(Analyser):
         try:
             # test if the server is running
             ollama.list()
-        except ConnectError:
+        except ConnectionError:
             raise ConfigurationError(
                 "Ollama server is not running. Start it manually and restart textLSP."
                 "To install Ollama see: https://ollama.com/download"
