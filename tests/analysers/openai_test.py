@@ -14,14 +14,10 @@ def analyser():
 
 
 def test_edit(analyser):
-    try:
+    with pytest.raises(AuthenticationError):
         analyser._edit('This is as santance.')
-    except AuthenticationError:
-        pass
 
 
 def test_generate(analyser):
-    try:
+    with pytest.raises(AuthenticationError):
         analyser._generate('Write me a sentence:')
-    except AuthenticationError:
-        pass
