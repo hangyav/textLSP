@@ -33,22 +33,22 @@ setup(
         'tree_sitter==0.21.3',
         'gitpython==3.1.44',
         'appdirs==1.4.4',
-        'openai==1.76.2',
+        'openai==1.82.1',
         'sortedcontainers==2.4.0',
         'langdetect==1.0.9',
-        'ollama==0.4.8',
+        'ollama==0.5.1',
     ],
     extras_require={
         'dev': [
             'pytest==8.3.5',
             'python-lsp-jsonrpc==1.1.2',
             'pytest-cov==6.1.1',
-            'coverage-threshold==0.5.0'
+            'coverage-threshold==0.6.2'
         ],
         'transformers': [
             'torch==2.7.0',
-            'transformers==4.51.3',
-            'bitsandbytes==0.45.5',
+            'transformers==4.52.4',
+            'bitsandbytes==0.46.0',
         ],
     },
 )
