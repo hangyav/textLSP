@@ -28,27 +28,27 @@ setup(
     },
     install_requires=[
         'pygls==1.3.1',
-        'lsprotocol==2023.0.1',
-        'language-tool-python==2.9.3',
+        'lsprotocol==2025.0.0',
+        'language-tool-python==2.9.4',
         'tree_sitter==0.21.3',
-        'gitpython==3.1.44',
+        'gitpython==3.1.45',
         'appdirs==1.4.4',
-        'openai==1.82.1',
+        'openai==1.98.0',
         'sortedcontainers==2.4.0',
         'langdetect==1.0.9',
         'ollama==0.5.1',
     ],
     extras_require={
         'dev': [
-            'pytest==8.3.5',
+            'pytest==8.4.1',
             'python-lsp-jsonrpc==1.1.2',
-            'pytest-cov==6.1.1',
+            'pytest-cov==6.2.1',
             'coverage-threshold==0.6.2'
         ],
         'transformers': [
-            'torch==2.7.0',
-            'transformers==4.52.4',
-            'bitsandbytes==0.46.0',
+            'torch==2.7.1',
+            'transformers==4.54.1',
+            'bitsandbytes==0.46.1',
         ],
     },
 )
