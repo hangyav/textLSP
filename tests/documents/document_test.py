@@ -3,7 +3,7 @@ import pytest
 from lsprotocol.types import (
     Position,
     Range,
-    TextDocumentContentChangeEvent_Type1,
+    TextDocumentContentChangePartial,
 )
 
 from textLSP.types import Interval
@@ -199,7 +199,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
         '\n'
         '3. This is a sentence. Another sentence in a paragraph.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # delete 'o' from Another
                 range=Range(
                     start=Position(
@@ -225,7 +225,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
         '\n'
         '3. This is a sentence. Another sentence in a paragraph.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # delete 'o' from Another
                 range=Range(
                     start=Position(
@@ -239,7 +239,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
                 ),
                 text='',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # insert 'o'
                 range=Range(
                     start=Position(
@@ -266,7 +266,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
         '\n'
         '3. This is a sentence. Another sentence in a paragraph.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # delete last character
                 range=Range(
                     start=Position(
@@ -280,7 +280,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
                 ),
                 text='',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # put it back
                 range=Range(
                     start=Position(
@@ -307,7 +307,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
         '\n'
         '3. This is a sentence. Another sentence in a paragraph.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # add character at the end
                 range=Range(
                     start=Position(
@@ -334,7 +334,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
         '3. This is a sentence. Another sentence in a paragraph.\n'
         '\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # remove line at the end
                 range=Range(
                     start=Position(
@@ -360,7 +360,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
         '\n'
         '3. This is a sentence. Another sentence in a paragraph.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # add character at the end
                 range=Range(
                     start=Position(
@@ -374,7 +374,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
                 ),
                 text='a',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # add character at the end
                 range=Range(
                     start=Position(
@@ -388,7 +388,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
                 ),
                 text='s',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # add character at the end
                 range=Range(
                     start=Position(
@@ -412,7 +412,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
     (
         'This is a sentence.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=0,
@@ -425,7 +425,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
                 ),
                 text='\nThis is a sentence.\n',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=1,
@@ -450,7 +450,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
         'This is a sentence.\n',
         [
             # Last two sentences deleted as done by nvim
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=0,
@@ -463,7 +463,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
                 ),
                 text='',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=1,
@@ -476,7 +476,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
                 ),
                 text='',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=1,
@@ -489,7 +489,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
                 ),
                 text='',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=0,
@@ -502,7 +502,7 @@ def test_get_sentence_at_offset(content, offset, length, exp):
                 ),
                 text='',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=1,

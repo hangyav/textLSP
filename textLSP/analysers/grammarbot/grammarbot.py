@@ -8,7 +8,7 @@ from lsprotocol.types import (
         Diagnostic,
         TextEdit,
 )
-from pygls.server import LanguageServer
+from pygls.lsp.server import LanguageServer
 
 from ..analyser import Analyser, AnalysisError
 from ...documents.document import BaseDocument

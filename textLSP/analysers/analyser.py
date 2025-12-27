@@ -1,15 +1,15 @@
 import logging
 
 from typing import List, Optional
-from pygls.server import LanguageServer
-from pygls.workspace import Document
+from pygls.lsp.server import LanguageServer
+from pygls.workspace import TextDocument
 from lsprotocol.types import (
         DidOpenTextDocumentParams,
         DidChangeTextDocumentParams,
         DidCloseTextDocumentParams,
         DidSaveTextDocumentParams,
         TextDocumentContentChangeEvent,
-        TextDocumentContentChangeEvent_Type2,
+        TextDocumentContentChangeWholeDocument,
         Diagnostic,
         DiagnosticSeverity,
         Range,
@@ -63,7 +63,7 @@ class Analyser():
         self._checked_documents = set()
         self._progressbar_token = ProgressBar.create_token()
 
-    def _did_open(self, doc: Document):
+    def _did_open(self, doc: TextDocument):
         raise NotImplementedError()
 
     def did_open(self, params: DidOpenTextDocumentParams):
@@ -79,7 +79,7 @@ class Analyser():
                 self._did_open(doc)
                 self._checked_documents.add(doc.uri)
 
-    def _did_change(self, doc: Document, changes: List[Interval]):
+    def _did_change(self, doc: TextDocument, changes: List[Interval]):
         raise NotImplementedError()
 
     def _handle_line_shifts(self, params: DidChangeTextDocumentParams):
@@ -91,7 +91,7 @@ class Analyser():
         accumulative_shifts = list()
         # handling inline shifts and building a list of line shifts for later
         for change in params.content_changes:
-            if type(change) == TextDocumentContentChangeEvent_Type2:
+            if type(change) == TextDocumentContentChangeWholeDocument:
                 continue
 
             if change.range.start != change.range.end:
@@ -314,7 +314,7 @@ class Analyser():
         elif should_update_diagnostics:
             self.language_server.publish_stored_diagnostics(doc)
 
-    def update_document(self, doc: Document, change: TextDocumentContentChangeEvent):
+    def update_document(self, doc: TextDocument, change: TextDocumentContentChangeEvent):
         self._content_change_dict[doc.uri].update_document(change, doc)
 
     def did_save(self, params: DidSaveTextDocumentParams):
@@ -336,7 +336,7 @@ class Analyser():
                     ):
                         self._did_change(doc, changes)
 
-    def _did_close(self, doc: Document):
+    def _did_close(self, doc: TextDocument):
         pass
 
     def did_close(self, params: DidCloseTextDocumentParams):
@@ -351,7 +351,7 @@ class Analyser():
     def get_document(self, document_descriptor) -> BaseDocument:
         if type(document_descriptor) != str:
             document_descriptor = document_descriptor.text_document.uri
-        return self.language_server.workspace.get_document(document_descriptor)
+        return self.language_server.workspace.get_text_document(document_descriptor)
 
     def get_severity(self) -> DiagnosticSeverity:
         if Analyser.CONFIGURATION_SEVERITY in self.config:
@@ -373,24 +373,24 @@ class Analyser():
             )
         )
 
-    def init_diagnostics(self, doc: Document):
+    def init_diagnostics(self, doc: TextDocument):
         self._diagnostics_dict[doc.uri] = PositionDict()
 
-    def get_diagnostics(self, doc: Document):
+    def get_diagnostics(self, doc: TextDocument):
         return self._diagnostics_dict.get(doc.uri, PositionDict())
 
-    def add_diagnostics(self, doc: Document, diagnostics: List[Diagnostic]):
+    def add_diagnostics(self, doc: TextDocument, diagnostics: List[Diagnostic]):
         for diag in diagnostics:
             self._diagnostics_dict[doc.uri].add(diag.range.start, diag)
         self.language_server.publish_stored_diagnostics(doc)
 
-    def remove_code_items_at_range(self, doc: Document, pos_range: Range, inclusive=(True, True)):
+    def remove_code_items_at_range(self, doc: TextDocument, pos_range: Range, inclusive=(True, True)):
         num = 0
         num += self._diagnostics_dict[doc.uri].remove_between(pos_range, inclusive)
         num += self._code_actions_dict[doc.uri].remove_between(pos_range, inclusive)
         return num
 
-    def init_code_actions(self, doc: Document):
+    def init_code_actions(self, doc: TextDocument):
         self._code_actions_dict[doc.uri] = PositionDict()
 
     def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
@@ -473,7 +473,7 @@ class Analyser():
 
         return res
 
-    def add_code_actions(self, doc: Document, actions: List[CodeAction]):
+    def add_code_actions(self, doc: TextDocument, actions: List[CodeAction]):
         for action in actions:
             self._code_actions_dict[doc.uri].add(
                 action.edit.document_changes[0].edits[0].range.start,
@@ -482,7 +482,7 @@ class Analyser():
 
     @staticmethod
     def build_single_suggestion_action(
-            doc: Document,
+            doc: TextDocument,
             title: str,
             edit: TextEdit,
             kind=TextLSPCodeActionKind.AcceptSuggestion,
@@ -507,7 +507,7 @@ class Analyser():
 
     @staticmethod
     def build_command_action(
-            doc: Document,
+            doc: TextDocument,
             title: str,
             command: Command,
             kind=TextLSPCodeActionKind.Command,
@@ -520,7 +520,7 @@ class Analyser():
             command=command,
         )
 
-    def init_document_items(self, doc: Document):
+    def init_document_items(self, doc: TextDocument):
         self.init_diagnostics(doc)
         self.init_code_actions(doc)
 
@@ -530,11 +530,10 @@ class Analyser():
         else:
             self._did_open(doc)
 
-    def command_analyse(self, *args):
-        args = args[0]
-        doc = self.get_document(args['uri'])
-        if 'interval' in args:
-            interval = args['interval']
+    def command_analyse(self, **kwargs):
+        doc = self.get_document(kwargs['uri'])
+        if 'interval' in kwargs:
+            interval = kwargs['interval']
             interval = Interval(interval['start'], interval['length'])
             with ProgressBar(
                     self.language_server,
@@ -549,7 +548,7 @@ class Analyser():
                     token=self._progressbar_token
             ):
                 self._command_analyse(doc)
-            self._checked_documents.add(args['uri'])
+            self._checked_documents.add(kwargs['uri'])
 
     def get_completions(self, params: Optional[CompletionParams] = None) -> Optional[CompletionList]:
         return None

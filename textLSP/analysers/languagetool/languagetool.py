@@ -1,21 +1,21 @@
 import logging
-
 from typing import List, Tuple
+
 from language_tool_python import LanguageTool
 from lsprotocol.types import (
-        Diagnostic,
-        Range,
-        Position,
-        TextEdit,
-        CodeAction,
-        MessageType,
+    CodeAction,
+    Diagnostic,
+    MessageType,
+    Position,
+    Range,
+    ShowMessageParams,
+    TextEdit,
 )
-from pygls.server import LanguageServer
+from pygls.lsp.server import LanguageServer
 
-from ..analyser import Analyser
-from ...types import Interval
 from ...documents.document import BaseDocument
-
+from ...types import Interval
+from ..analyser import Analyser
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +38,9 @@ class LanguageToolAnalyser(Analyser):
         matches = self._get_tool_for_language(doc.language).check(text)
 
         for match in matches:
-            token = text[match.offset:match.offset+match.errorLength]
+            token = text[match.offset:match.offset+match.error_length]
 
-            range = doc.range_at_offset(match.offset+offset, match.errorLength, True)
+            range = doc.range_at_offset(match.offset+offset, match.error_length, True)
             range = Range(
                 start=range.start,
                 end=Position(
@@ -53,7 +53,7 @@ class LanguageToolAnalyser(Analyser):
                 message=f'"{token}": {match.message}',
                 source='languagetool',
                 severity=self.get_severity(),
-                code=f'languagetool:{match.ruleId}',
+                code=f'languagetool:{match.rule_id}',
             )
             if len(match.replacements) > 0:
                 for replacement in match.replacements:
@@ -202,9 +202,11 @@ class LanguageToolAnalyser(Analyser):
             tool = LanguageTool(lang)
             self.tools[lang] = tool
         except ValueError:
-            self.language_server.show_message(
-                f'{self.name}: unsupported language: {lang}! Using {DEFAULT_LANGUAGE}',
-                MessageType.Error,
+            self.language_server.window_show_message(
+                ShowMessageParams(
+                    message=f"{self.name}: unsupported language: {lang}! Using {DEFAULT_LANGUAGE}",
+                    type=MessageType.Error,
+                )
             )
 
             if lang == DEFAULT_LANGUAGE:

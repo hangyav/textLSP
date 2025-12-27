@@ -1,29 +1,29 @@
 import logging
-
-from re import Match
 from itertools import chain
+from re import Match
 from typing import List, Tuple
+
 from lsprotocol.types import (
-        Diagnostic,
-        Range,
-        Position,
-        TextEdit,
-        CodeAction,
-        MessageType,
+    CodeAction,
+    Diagnostic,
+    MessageType,
+    Position,
+    Range,
+    ShowMessageParams,
+    TextEdit,
 )
-from pygls.server import LanguageServer
+from pygls.lsp.server import LanguageServer
 from transformers import pipeline
 
-from ..analyser import Analyser
-from ...types import (
-    Interval,
-    LINE_PATTERN,
-    TokenDiff,
-    ConfigurationError,
-)
-from ...documents.document import BaseDocument
 from ... import nn_utils
-
+from ...documents.document import BaseDocument
+from ...types import (
+    LINE_PATTERN,
+    ConfigurationError,
+    Interval,
+    TokenDiff,
+)
+from ..analyser import Analyser
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +49,11 @@ class HFCheckerAnalyser(Analyser):
         try:
             nn_utils.set_quantization_args(quanitze, device, model_kwargs)
         except ConfigurationError as e:
-            language_server.show_message(
-                f'{self.name}: {str(e)}',
-                MessageType.Error,
+            language_server.window_show_message(
+                ShowMessageParams(
+                    message=f"{self.name}: {str(e)}",
+                    type=MessageType.Error,
+                )
             )
             self.config[self.CONFIGURATION_QUANTIZE] = 32
 

@@ -5,7 +5,7 @@ import logging
 from lsprotocol.types import (
     Position,
     Range,
-    TextDocumentContentChangeEvent_Type1
+    TextDocumentContentChangePartial
 )
 from textLSP.types import Interval
 from textLSP.documents.document import ChangeTracker
@@ -318,7 +318,7 @@ def test_get_paragraphs_at_range(content, range, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # delete 'o' from Introduction
                 range=Range(
                     start=Position(
@@ -347,7 +347,7 @@ def test_get_paragraphs_at_range(content, range, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # delete 'o' from Introduction
                 range=Range(
                     start=Position(
@@ -361,7 +361,7 @@ def test_get_paragraphs_at_range(content, range, exp):
                 ),
                 text='',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # insert 'o'
                 range=Range(
                     start=Position(
@@ -391,7 +391,7 @@ def test_get_paragraphs_at_range(content, range, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # delete last character
                 range=Range(
                     start=Position(
@@ -405,7 +405,7 @@ def test_get_paragraphs_at_range(content, range, exp):
                 ),
                 text='',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # put it back
                 range=Range(
                     start=Position(
@@ -435,7 +435,7 @@ def test_get_paragraphs_at_range(content, range, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # add character at the end
                 range=Range(
                     start=Position(
@@ -464,7 +464,7 @@ def test_get_paragraphs_at_range(content, range, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # add character at the end
                 range=Range(
                     start=Position(
@@ -478,7 +478,7 @@ def test_get_paragraphs_at_range(content, range, exp):
                 ),
                 text='a',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # add character at the end
                 range=Range(
                     start=Position(
@@ -492,7 +492,7 @@ def test_get_paragraphs_at_range(content, range, exp):
                 ),
                 text='s',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # add character at the end
                 range=Range(
                     start=Position(
@@ -523,7 +523,7 @@ def test_get_paragraphs_at_range(content, range, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # add character at the end
                 range=Range(
                     start=Position(
@@ -537,7 +537,7 @@ def test_get_paragraphs_at_range(content, range, exp):
                 ),
                 text='a',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # add character at the end
                 range=Range(
                     start=Position(
@@ -551,7 +551,7 @@ def test_get_paragraphs_at_range(content, range, exp):
                 ),
                 text='s',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # add character at the end
                 range=Range(
                     start=Position(
@@ -581,7 +581,7 @@ def test_get_paragraphs_at_range(content, range, exp):
         'This is a sentence.\n'
         '\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=6,
@@ -622,7 +622,7 @@ def test_change_tracker(content, edits, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # add 'o' to Introduction
                 range=Range(
                     start=Position(
@@ -654,7 +654,7 @@ def test_change_tracker(content, edits, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # delete 'o' from Introduction
                 range=Range(
                     start=Position(
@@ -693,7 +693,7 @@ def test_change_tracker(content, edits, exp):
         'A final sentence.\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # replace the word initial
                 range=Range(
                     start=Position(
@@ -747,7 +747,7 @@ def test_change_tracker(content, edits, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=5,
@@ -787,7 +787,7 @@ def test_change_tracker(content, edits, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=6,
@@ -820,7 +820,7 @@ def test_change_tracker(content, edits, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=2,
@@ -852,7 +852,7 @@ def test_change_tracker(content, edits, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=2,
@@ -895,7 +895,7 @@ def test_change_tracker(content, edits, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # delete last character: '.'
                 range=Range(
                     start=Position(
@@ -927,7 +927,7 @@ def test_change_tracker(content, edits, exp):
         '\\end{document}\n'
         '\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 # delete last character: '.'
                 range=Range(
                     start=Position(
@@ -957,7 +957,7 @@ def test_change_tracker(content, edits, exp):
         'This is a sentence.\n'
         '\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=6,
@@ -986,7 +986,7 @@ def test_change_tracker(content, edits, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=1,
@@ -1017,7 +1017,7 @@ def test_change_tracker(content, edits, exp):
         '\n'
         '\\end{document}',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=3,
@@ -1030,7 +1030,7 @@ def test_change_tracker(content, edits, exp):
                 ),
                 text='\\section{',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=3,

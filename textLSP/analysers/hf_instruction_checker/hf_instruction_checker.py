@@ -1,10 +1,8 @@
 import logging
 
 from typing import Optional, List
-from pygls.server import LanguageServer
+from pygls.lsp.server import LanguageServer
 from lsprotocol.types import (
-        Diagnostic,
-        Range,
         Position,
         TextEdit,
         CodeAction,
@@ -16,7 +14,6 @@ from lsprotocol.types import (
         CompletionParams,
         CompletionList,
         CompletionItem,
-        MessageType,
 )
 
 from ..hf_checker import HFCheckerAnalyser

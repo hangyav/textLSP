@@ -1,9 +1,9 @@
 import logging
 
 from typing import List, Optional
-from pygls.server import LanguageServer
+from pygls.lsp.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol, lsp_method
-from pygls.workspace import Document
+from pygls.workspace import TextDocument
 from lsprotocol.types import (
     TEXT_DOCUMENT_DID_OPEN,
     TEXT_DOCUMENT_DID_CHANGE,
@@ -14,6 +14,7 @@ from lsprotocol.types import (
     INITIALIZE,
     TEXT_DOCUMENT_COMPLETION,
     SHUTDOWN,
+    PublishDiagnosticsParams,
 )
 from lsprotocol.types import (
     DidOpenTextDocumentParams,
@@ -47,17 +48,26 @@ class TextLSPLanguageServerProtocol(LanguageServerProtocol):
     @lsp_method(INITIALIZE)
     def lsp_initialize(self, params: InitializeParams) -> InitializeResult:
         result = super().lsp_initialize(params)
+        for item in result:
+            # result is a generator object that we run to run the init steps
+            pass
+
         self._workspace = TextLSPWorkspace.workspace2textlspworkspace(
             self.workspace,
             self._server.analyser_handler,
             self._server.settings,
         )
+
         self._server.update_settings(params.initialization_options)
-        return result
+
+        return InitializeResult(
+            capabilities=self.server_capabilities,
+            server_info=self.server_info,
+        )
 
 
 class TextLSPLanguageServer(LanguageServer):
-    # TODO make a config class for easier settings hangling and option for
+    # TODO: make a config class for easier settings hangling and option for
     # settings keys such as textLSP.check_text.on_edit
     CONFIGURATION_SECTION = 'textLSP'
     CONFIGURATION_ANALYSERS = 'analysers'
@@ -112,15 +122,17 @@ class TextLSPLanguageServer(LanguageServer):
             )
         if self.get_document_settings(settings):
             # update only if there was any update related to it
-            self.lsp.workspace.update_settings(
+            self.protocol.workspace.update_settings(
                 self.get_document_settings()
             )
 
-    def publish_stored_diagnostics(self, doc: Document):
+    def publish_stored_diagnostics(self, doc: TextDocument):
         diagnostics = list()
         for lst in self.analyser_handler.get_diagnostics(doc):
             diagnostics.extend(lst)
-        self.publish_diagnostics(doc.uri, diagnostics)
+        self.text_document_publish_diagnostics(
+            PublishDiagnosticsParams(doc.uri, diagnostics)
+        )
 
     def shutdown(self):
         logger.warning('TextLSP shutting down!')

@@ -6,7 +6,7 @@ from lsprotocol.types import (
     TextDocumentItem,
     DidChangeTextDocumentParams,
     VersionedTextDocumentIdentifier,
-    TextDocumentContentChangeEvent_Type1,
+    TextDocumentContentChangePartial,
     Range,
     Position,
     DidSaveTextDocumentParams,
@@ -77,7 +77,7 @@ def test_bug1(json_converter, langtool_ls_onsave):
             uri='dummy.tex',
         ),
         content_changes=[
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 Range(
                     start=Position(line=5, character=19),
                     end=Position(line=6, character=0),
@@ -96,7 +96,7 @@ def test_bug1(json_converter, langtool_ls_onsave):
             uri='dummy.tex',
         ),
         content_changes=[
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 Range(
                     start=Position(line=6, character=19),
                     end=Position(line=7, character=0),
@@ -181,7 +181,7 @@ def test_bug2(json_converter, langtool_ls_onsave):
                 uri='dummy.txt',
             ),
             content_changes=[
-                TextDocumentContentChangeEvent_Type1(
+                TextDocumentContentChangePartial(
                     edit_range,
                     '',
                 )

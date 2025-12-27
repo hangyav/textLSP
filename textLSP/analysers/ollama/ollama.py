@@ -1,6 +1,7 @@
 import logging
 from typing import List, Optional, Tuple
 
+import ollama
 from lsprotocol.types import (
     CodeAction,
     CodeActionParams,
@@ -12,14 +13,13 @@ from lsprotocol.types import (
     MessageType,
     Position,
     Range,
+    ShowMessageParams,
     TextDocumentEdit,
     TextEdit,
     VersionedTextDocumentIdentifier,
     WorkspaceEdit,
 )
-from pygls.server import LanguageServer
-
-import ollama
+from pygls.lsp.server import LanguageServer
 
 from ...documents.document import BaseDocument
 from ...types import ConfigurationError, Interval, ProgressBar, TokenDiff
@@ -109,9 +109,11 @@ class OllamaAnalyser(Analyser):
             )
             logger.debug(f"Generation output: {res}")
         except ollama.ResponseError as e:
-            self.language_server.show_message(
-                str(e),
-                MessageType.Error,
+            self.language_server.window_show_message(
+                ShowMessageParams(
+                    message=str(e),
+                    type=MessageType.Error,
+                )
             )
             return None
 
