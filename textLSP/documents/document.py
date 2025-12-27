@@ -13,8 +13,8 @@ from lsprotocol.types import (
     Position,
     Range,
     TextDocumentContentChangeEvent,
-    TextDocumentContentChangeEvent_Type1,
-    TextDocumentContentChangeEvent_Type2,
+    TextDocumentContentChangePartial,
+    TextDocumentContentChangeWholeDocument,
 )
 from pygls.workspace import TextDocument
 from pygls.workspace.position_codec import PositionCodec
@@ -524,7 +524,7 @@ class TreeSitterDocument(CleanableDocument):
             self._tree = self._parse_source()
         return self._tree
 
-    def _clean_source(self, change: TextDocumentContentChangeEvent_Type1 = None):
+    def _clean_source(self, change: TextDocumentContentChangePartial = None):
         self._text_intervals = OffsetPositionIntervalList()
 
         offset = 0
@@ -975,7 +975,7 @@ class TreeSitterDocument(CleanableDocument):
 
         return text_intervals
 
-    def _apply_incremental_change(self, change: TextDocumentContentChangeEvent_Type1) -> None:
+    def _apply_incremental_change(self, change: TextDocumentContentChangePartial) -> None:
         """Apply an ``Incremental`` text change to the document"""
         reparse_all = self.config.setdefault(
             self.CONFIGURATION_REPARSE_ALL,
@@ -1266,7 +1266,7 @@ class ChangeTracker():
         if self.full_document_change:
             return
 
-        if type(change) == TextDocumentContentChangeEvent_Type2:
+        if type(change) == TextDocumentContentChangeWholeDocument:
             self.full_document_change = True
             self._items = [(-1, True)]
             return

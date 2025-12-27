@@ -1,29 +1,29 @@
 import logging
-from openai import OpenAI, APIError
+from typing import List, Optional, Tuple
 
-from typing import List, Tuple, Optional
 from lsprotocol.types import (
-    Diagnostic,
-    Range,
-    Position,
-    TextEdit,
     CodeAction,
-    WorkspaceEdit,
-    Command,
     CodeActionParams,
-    TextDocumentEdit,
-    VersionedTextDocumentIdentifier,
-    CompletionParams,
-    CompletionList,
+    Command,
     CompletionItem,
+    CompletionList,
+    CompletionParams,
+    Diagnostic,
     MessageType,
+    Position,
+    Range,
+    ShowMessageParams,
+    TextDocumentEdit,
+    TextEdit,
+    VersionedTextDocumentIdentifier,
+    WorkspaceEdit,
 )
-from pygls.server import LanguageServer
+from openai import APIError, OpenAI
+from pygls.lsp.server import LanguageServer
 
-from ..analyser import Analyser
-from ...types import Interval, ConfigurationError, TokenDiff, ProgressBar
 from ...documents.document import BaseDocument
-
+from ...types import ConfigurationError, Interval, ProgressBar, TokenDiff
+from ..analyser import Analyser
 
 logger = logging.getLogger(__name__)
 
@@ -149,9 +149,11 @@ class OpenAIAnalyser(Analyser):
         try:
             edits = self._edit(text)
         except APIError as e:
-            self.language_server.show_message(
-                str(e),
-                MessageType.Error,
+            self.language_server.window_show_message(
+                ShowMessageParams(
+                    message=str(e),
+                    type=MessageType.Error,
+                )
             )
             edits = []
 
@@ -276,9 +278,11 @@ class OpenAIAnalyser(Analyser):
             try:
                 new_text = self._generate(prompt)
             except APIError as e:
-                self.language_server.show_message(
-                    str(e),
-                    MessageType.Error,
+                self.language_server.window_show_message(
+                    ShowMessageParams(
+                        message=str(e),
+                        type=MessageType.Error,
+                    )
                 )
                 return
 

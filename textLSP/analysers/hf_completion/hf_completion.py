@@ -1,21 +1,21 @@
 import logging
+from typing import List, Optional
 
-from typing import Optional, List
 from lsprotocol.types import (
-        CompletionParams,
-        CompletionItem,
-        CompletionList,
-        CodeActionParams,
-        CodeAction,
+    CodeAction,
+    CodeActionParams,
+    CompletionItem,
+    CompletionList,
+    CompletionParams,
+    MessageType,
+    ShowMessageParams,
 )
-from pygls.server import LanguageServer
-from lsprotocol.types import MessageType
+from pygls.lsp.server import LanguageServer
 from transformers import pipeline
 
-from ..analyser import Analyser
-from ...types import ConfigurationError
 from ... import nn_utils
-
+from ...types import ConfigurationError
+from ..analyser import Analyser
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +43,11 @@ class HFCompletionAnalyser(Analyser):
         try:
             nn_utils.set_quantization_args(quanitze, device, model_kwargs)
         except ConfigurationError as e:
-            language_server.show_message(
-                f'{self.name}: {str(e)}',
-                MessageType.Error,
+            language_server.window_show_message(
+                ShowMessageParams(
+                    message=f'{self.name}: {str(e)}',
+                    type=MessageType.Error,
+                )
             )
             self.config[self.CONFIGURATION_QUANTIZE] = 32
 

@@ -361,9 +361,9 @@ class ProgressBar():
         if percentage is not None:
             self.percentage = percentage
 
-        if self.token not in self.ls.progress.tokens:
-            self.ls.progress.create(self.token)
-        self.ls.progress.begin(
+        if self.token not in self.ls.work_done_progress.tokens:
+            self.ls.work_done_progress.create(self.token)
+        self.ls.work_done_progress.begin(
             self.token,
             WorkDoneProgressBegin(
                 title=self.title,
@@ -372,7 +372,7 @@ class ProgressBar():
         )
 
     def update(self, message, percentage=0):
-        self.ls.progress.report(
+        self.ls.work_done_progress.report(
             self.token,
             WorkDoneProgressReport(
                 message=message,
@@ -381,7 +381,7 @@ class ProgressBar():
         )
 
     def end(self, message):
-        self.ls.progress.end(
+        self.ls.work_done_progress.end(
             self.token,
             WorkDoneProgressEnd(message=message)
         )

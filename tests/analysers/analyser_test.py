@@ -6,7 +6,7 @@ from lsprotocol.types import (
     TextDocumentItem,
     DidChangeTextDocumentParams,
     VersionedTextDocumentIdentifier,
-    TextDocumentContentChangeEvent_Type1,
+    TextDocumentContentChangePartial,
     Range,
     Position,
     DidSaveTextDocumentParams,
@@ -173,7 +173,7 @@ def test_line_shifts(text, edit, exp, json_converter, langtool_ls_onsave):
             uri='dummy.txt',
         ),
         content_changes=[
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 edit[0],
                 edit[1],
             )
@@ -270,7 +270,7 @@ def test_diagnostics_bug1(text, edit, exp, json_converter, langtool_ls_onsave):
             uri='dummy.txt',
         ),
         content_changes=[
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 edit[0],
                 edit[1],
             )
@@ -339,7 +339,7 @@ def test_diagnostics_bug2(json_converter, langtool_ls_onsave):
             uri='dummy.tex',
         ),
         content_changes=[
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 Range(
                     start=Position(line=2, character=0),
                     end=Position(line=3, character=0),
@@ -371,7 +371,7 @@ def test_diagnostics_bug2(json_converter, langtool_ls_onsave):
             uri='dummy.tex',
         ),
         content_changes=[
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 Range(
                     start=Position(line=1, character=16),
                     end=Position(line=2, character=0),
@@ -452,21 +452,21 @@ def test_diagnostics_bug3(json_converter, langtool_ls_onsave):
             uri='dummy.md',
         ),
         content_changes=[
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=0),
                     end=Position(line=2, character=0)
                 ),
                 text='A'
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=1),
                     end=Position(line=2, character=1)
                 ),
                 text='s'
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=2),
                     end=Position(line=2, character=2)

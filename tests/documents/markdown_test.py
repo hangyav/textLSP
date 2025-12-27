@@ -4,7 +4,7 @@ from textLSP.documents.markdown.markdown import MarkDownDocument
 from lsprotocol.types import (
     Position,
     Range,
-    TextDocumentContentChangeEvent_Type1
+    TextDocumentContentChangePartial
 )
 
 
@@ -114,7 +114,7 @@ def test_highlight(src, offset, exp):
     (
         'This is a sentence.',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(
                         line=0,
@@ -138,77 +138,77 @@ def test_highlight(src, offset, exp):
         '\n'
         'This is a new paragraph.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=0, character=19),
                     end=Position(line=0, character=36)
                 ),
                 text='',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=1, character=0),
                     end=Position(line=2, character=0)
                 ),
                 text='',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=1, character=0),
                     end=Position(line=1, character=24)
                 ),
                 text='',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=0, character=19),
                     end=Position(line=0, character=19)
                 ),
                 text='',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=1, character=0),
                     end=Position(line=2, character=0)
                 ),
                 text='',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=0, character=19),
                     end=Position(line=1, character=0)
                 ),
                 text='\n\n',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=1, character=0),
                     end=Position(line=1, character=0)
                 ),
                 text='\n',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=0),
                     end=Position(line=2, character=0)
                 ),
                 text='A',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=1),
                     end=Position(line=2, character=1)
                 ),
                 text='s',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=2),
                     end=Position(line=2, character=2)
                 ),
                 text='d',
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=3),
                     end=Position(line=2, character=3)
@@ -232,42 +232,42 @@ def test_highlight(src, offset, exp):
         '\n'
         '# Header\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=13),
                     end=Position(line=2, character=27),
                 ),
                 text=''
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=3, character=0),
                     end=Position(line=4, character=0),
                 ),
                 text=''
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=3, character=0),
                     end=Position(line=3, character=15),
                 ),
                 text=''
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=13),
                     end=Position(line=2, character=13),
                 ),
                 text=''
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=3, character=0),
                     end=Position(line=4, character=0),
                 ),
                 text=''
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=13),
                     end=Position(line=2, character=13),
@@ -291,7 +291,7 @@ def test_highlight(src, offset, exp):
         '\n'
         'Sentence one. Sentence two.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=1, character=0),
                     end=Position(line=2, character=0),
@@ -312,21 +312,21 @@ def test_highlight(src, offset, exp):
         '\n'
         'Sentence one. Sentence two.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=0),
                     end=Position(line=2, character=0)
                 ),
                 text='A'
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=1),
                     end=Position(line=2, character=1)
                 ),
                 text='s'
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=2),
                     end=Position(line=2, character=2)
@@ -347,21 +347,21 @@ def test_highlight(src, offset, exp):
         '\n'
         'Sentence one. Sentence two.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=0, character=22),
                     end=Position(line=0, character=22)
                 ),
                 text=' '
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=0, character=22),
                     end=Position(line=0, character=23)
                 ),
                 text='\n'
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=1, character=0),
                     end=Position(line=1, character=0)
@@ -381,14 +381,14 @@ def test_highlight(src, offset, exp):
         'Header\n'
         'This is a sentence.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=0),
                     end=Position(line=2, character=0)
                 ),
                 text='#'
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=1),
                     end=Position(line=2, character=1)
@@ -408,14 +408,14 @@ def test_highlight(src, offset, exp):
         'Header\n'
         'This is a sentence.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=0, character=0),
                     end=Position(line=0, character=0)
                 ),
                 text='#'
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=0, character=1),
                     end=Position(line=0, character=1)
@@ -435,14 +435,14 @@ def test_highlight(src, offset, exp):
         '# Header\n'
         'This is a sentence.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=1),
                     end=Position(line=2, character=2)
                 ),
                 text=''
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=0),
                     end=Position(line=2, character=1)
@@ -459,14 +459,14 @@ def test_highlight(src, offset, exp):
     (
         'This is a sentence.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=0, character=0),
                     end=Position(line=1, character=0)
                 ),
                 text=''
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=0, character=0),
                     end=Position(line=0, character=0)
@@ -482,7 +482,7 @@ def test_highlight(src, offset, exp):
         '* This is point one.\n'
         '* This is point two.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=0, character=0),
                     end=Position(line=0, character=0)
@@ -502,14 +502,14 @@ def test_highlight(src, offset, exp):
         'This is a sentence.\n'
         'A\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=1, character=1),
                     end=Position(line=1, character=1)
                 ),
                 text='B'
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=1, character=2),
                     end=Position(line=1, character=2)
@@ -525,14 +525,14 @@ def test_highlight(src, offset, exp):
         'This is a sentence.\n'
         'A\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=1, character=1),
                     end=Position(line=1, character=1)
                 ),
                 text=' '
             ),
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=1, character=2),
                     end=Position(line=1, character=2)
@@ -551,7 +551,7 @@ def test_highlight(src, offset, exp):
         '\n'
         'This is a sentence.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=0),
                     end=Position(line=2, character=0)
@@ -572,7 +572,7 @@ def test_highlight(src, offset, exp):
         '\n'
         'This is a sentence.\n',
         [
-            TextDocumentContentChangeEvent_Type1(
+            TextDocumentContentChangePartial(
                 range=Range(
                     start=Position(line=2, character=0),
                     end=Position(line=2, character=1)

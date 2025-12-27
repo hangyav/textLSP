@@ -11,7 +11,7 @@ from lsprotocol.types import (
         TextEdit,
         CodeAction,
 )
-from pygls.server import LanguageServer
+from pygls.lsp.server import LanguageServer
 
 from ..analyser import Analyser
 from ...types import Interval, TEXT_PASSAGE_PATTERN
