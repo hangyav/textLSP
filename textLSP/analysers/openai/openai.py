@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional, Tuple
 
 from lsprotocol.types import (
+    ApplyWorkspaceEditParams,
     CodeAction,
     CodeActionParams,
     Command,
@@ -309,7 +310,9 @@ class OpenAIAnalyser(Analyser):
                     )
                 ]
             )
-            self.language_server.apply_edit(edit, "textlsp.openai.generate")
+            self.language_server.workspace_apply_edit(
+                ApplyWorkspaceEditParams(edit, "textlsp.openai.generate")
+            )
 
     def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
         doc = self.get_document(params)

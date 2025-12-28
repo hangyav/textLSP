@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 
 import ollama
 from lsprotocol.types import (
+    ApplyWorkspaceEditParams,
     CodeAction,
     CodeActionParams,
     Command,
@@ -281,7 +282,9 @@ class OllamaAnalyser(Analyser):
                     )
                 ]
             )
-            self.language_server.apply_edit(edit, "textlsp.ollama.generate")
+            self.language_server.workspace_apply_edit(
+                ApplyWorkspaceEditParams(edit, "textlsp.ollama.generate")
+            )
 
     def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
         doc = self.get_document(params)
