@@ -37,12 +37,12 @@ class OllamaAnalyser(Analyser):
     CONFIGURATION_MAX_TOKEN = "max_token"
     CONFIGURATION_PROMPT_MAGIC = "prompt_magic"
 
-    SETTINGS_DEFAULT_MODEL = "phi3:14b-instruct"
+    SETTINGS_DEFAULT_MODEL = "gemma3:4b"
     SETTINGS_DEFAULT_KEEP_ALIVE = "10m"
     SETTINGS_DEFAULT_EDIT_INSTRUCTION = (
-        "Fix spelling and grammar errors of the"
-        " input sentence. Print only the"
-        " the corrected sentence even if it is correct. Input: "
+        "Correct all grammar mistakes in the following text."
+        " Be rigorous but do not change the meaning and style, or add or remove content."
+        " Output only the corrected text even if it is correct."
     )
     SETTINGS_DEFAULT_TEMPERATURE = 0
     SETTINGS_DEFAULT_MAX_TOKEN = 50

@@ -160,8 +160,8 @@ textLSP = {
             on_save = true,
             on_change = false,
           },
-          model = "phi3:3.8b-instruct",  -- smaller but faster model
-          -- model = "phi3:14b-instruct",  -- more accurate
+          model = "gemma3:4b",  -- more accurate
+          -- model = "gemma3:1b",  -- smaller but faster model
           max_token = 50,
         },
         gramformer = {
