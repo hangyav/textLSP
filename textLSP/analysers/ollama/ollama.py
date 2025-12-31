@@ -100,11 +100,11 @@ class OllamaAnalyser(Analyser):
                 self.CONFIGURATION_KEEP_ALIVE, self.SETTINGS_DEFAULT_KEEP_ALIVE
             )
         try:
-            res = ollama.generate(
+            res = ollama.chat(
                 model=self.config.get(
                     self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL
                 ),
-                prompt=prompt,
+                messages=[{"role": "user", "content": prompt}],
                 options=options,
                 keep_alive=keep_alive,
             )
@@ -135,7 +135,7 @@ class OllamaAnalyser(Analyser):
         if res is None:
             return [], []
 
-        edits = TokenDiff.token_level_diff(text, res["response"].strip())
+        edits = TokenDiff.token_level_diff(text, res['message']['content'].strip())
 
         for edit in edits:
             if edit.type == TokenDiff.INSERT:
@@ -259,7 +259,7 @@ class OllamaAnalyser(Analyser):
             if result is None:
                 return [], []
 
-            new_text = f"{result['response'].strip()}\n"
+            new_text = f"{result['message']['content'].strip()}\n"
             position = Position(**eval(position))
             range = Range(
                 start=position,
