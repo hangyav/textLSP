@@ -84,8 +84,6 @@ magic command (see the OpenAI analyser below).
    </details>
 - [hf_completion](https://huggingface.co/docs/transformers/task_summary#language-modeling):
   Huggingface `fill-mask` pipeline based text completion.
-- [Gramformer](https://github.com/PrithivirajDamodaran/Gramformer): Neural
-  network based system.
 
 </details>
 
@@ -143,12 +141,6 @@ Some analyzers need additional dependencies!
 
 ```
 pip install textLSP[transformers]
-```
-
-- Gramformer needs to be installed manually:
-
-```
-pip install git+https://github.com/PrithivirajDamodaran/Gramformer.git
 ```
 
 ### Running
