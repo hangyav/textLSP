@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 
 import ollama
 from lsprotocol.types import (
+    ApplyWorkspaceEditParams,
     CodeAction,
     CodeActionParams,
     Command,
@@ -36,12 +37,12 @@ class OllamaAnalyser(Analyser):
     CONFIGURATION_MAX_TOKEN = "max_token"
     CONFIGURATION_PROMPT_MAGIC = "prompt_magic"
 
-    SETTINGS_DEFAULT_MODEL = "phi3:14b-instruct"
+    SETTINGS_DEFAULT_MODEL = "gemma3:4b"
     SETTINGS_DEFAULT_KEEP_ALIVE = "10m"
     SETTINGS_DEFAULT_EDIT_INSTRUCTION = (
-        "Fix spelling and grammar errors of the"
-        " input sentence. Print only the"
-        " the corrected sentence even if it is correct. Input: "
+        "Correct all grammar mistakes in the following text."
+        " Be rigorous but do not change the meaning and style, or add or remove content."
+        " Output only the corrected text even if it is correct."
     )
     SETTINGS_DEFAULT_TEMPERATURE = 0
     SETTINGS_DEFAULT_MAX_TOKEN = 50
@@ -99,11 +100,11 @@ class OllamaAnalyser(Analyser):
                 self.CONFIGURATION_KEEP_ALIVE, self.SETTINGS_DEFAULT_KEEP_ALIVE
             )
         try:
-            res = ollama.generate(
+            res = ollama.chat(
                 model=self.config.get(
                     self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL
                 ),
-                prompt=prompt,
+                messages=[{"role": "user", "content": prompt}],
                 options=options,
                 keep_alive=keep_alive,
             )
@@ -134,7 +135,7 @@ class OllamaAnalyser(Analyser):
         if res is None:
             return [], []
 
-        edits = TokenDiff.token_level_diff(text, res["response"].strip())
+        edits = TokenDiff.token_level_diff(text, res['message']['content'].strip())
 
         for edit in edits:
             if edit.type == TokenDiff.INSERT:
@@ -258,7 +259,7 @@ class OllamaAnalyser(Analyser):
             if result is None:
                 return [], []
 
-            new_text = f"{result['response'].strip()}\n"
+            new_text = f"{result['message']['content'].strip()}\n"
             position = Position(**eval(position))
             range = Range(
                 start=position,
@@ -281,7 +282,9 @@ class OllamaAnalyser(Analyser):
                     )
                 ]
             )
-            self.language_server.apply_edit(edit, "textlsp.ollama.generate")
+            self.language_server.workspace_apply_edit(
+                ApplyWorkspaceEditParams(edit, "textlsp.ollama.generate")
+            )
 
     def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
         doc = self.get_document(params)

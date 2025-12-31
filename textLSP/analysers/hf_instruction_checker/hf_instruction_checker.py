@@ -3,6 +3,7 @@ import logging
 from typing import Optional, List
 from pygls.lsp.server import LanguageServer
 from lsprotocol.types import (
+        ApplyWorkspaceEditParams,
         Position,
         TextEdit,
         CodeAction,
@@ -102,7 +103,9 @@ class HFInstructionCheckerAnalyser(HFCheckerAnalyser):
                     )
                 ]
             )
-            self.language_server.apply_edit(edit, 'textlsp.openai.generate')
+            self.language_server.workspace_apply_edit(
+                ApplyWorkspaceEditParams(edit, "textlsp.openai.generate")
+            )
 
     def get_code_actions(self, params: CodeActionParams) -> Optional[List[CodeAction]]:
         doc = self.get_document(params)
