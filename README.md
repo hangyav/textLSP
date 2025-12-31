@@ -214,8 +214,8 @@ textLSP = {
                 on_save = false,
                 on_change = false,
             },
-            model = 'gpt-3.5-turbo',
-            max_token = 16,
+            model = 'gpt-5-nano',
+            max_token = 100,
         },
         grammarbot = {
             enabled = false,

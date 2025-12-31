@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional, Tuple
+from typing import List, Literal, Optional, Tuple
 
 from lsprotocol.types import (
     ApplyWorkspaceEditParams,
@@ -19,7 +19,8 @@ from lsprotocol.types import (
     VersionedTextDocumentIdentifier,
     WorkspaceEdit,
 )
-from openai import APIError, OpenAI
+from openai import APIError, Omit, OpenAI, omit
+from openai.types.shared.reasoning_effort import ReasoningEffort
 from pygls.lsp.server import LanguageServer
 
 from ...documents.document import BaseDocument
@@ -36,13 +37,25 @@ class OpenAIAnalyser(Analyser):
     CONFIGURATION_EDIT_INSTRUCTION = "edit_instruction"
     CONFIGURATION_TEMPERATURE = "temperature"
     CONFIGURATION_MAX_TOKEN = "max_token"
+    CONFIGURATION_SEED = "seed"
+    CONFIGURATION_STORE = "store"
+    CONFIGURATION_VERBOSITY = "verbosity"
+    CONFIGURATION_REASONING_EFFORT = "reasoning_effort"
     CONFIGURATION_PROMPT_MAGIC = "prompt_magic"
 
     SETTINGS_DEFAULT_URL = None
-    SETTINGS_DEFAULT_MODEL = "text-babbage-001"
-    SETTINGS_DEFAULT_EDIT_INSTRUCTION = "Fix spelling and grammar errors."
-    SETTINGS_DEFAULT_TEMPERATURE = 0
-    SETTINGS_DEFAULT_MAX_TOKEN = 16
+    SETTINGS_DEFAULT_MODEL = "gpt-5-nano"
+    SETTINGS_DEFAULT_EDIT_INSTRUCTION = (
+        "Correct all grammar mistakes in the following text."
+        " Be rigorous but do not change the meaning and style, or add or remove content."
+        " Output only the corrected text even if it is correct."
+    )
+    SETTINGS_DEFAULT_TEMPERATURE = None
+    SETTINGS_DEFAULT_MAX_TOKEN = 100
+    SETTINGS_DEFAULT_SEED = 42
+    SETTINGS_DEFAULT_STORE = False
+    SETTINGS_DEFAULT_VERBOSITY = "medium"
+    SETTINGS_DEFAULT_REASONING_EFFORT = "minimal"
     SETTINGS_DEFAULT_PROMPT_MAGIC = "%OPENAI% "
     SETTINGS_DEFAULT_CHECK_ON = {
         Analyser.CONFIGURATION_CHECK_ON_OPEN: False,
@@ -56,6 +69,21 @@ class OpenAIAnalyser(Analyser):
             raise ConfigurationError(
                 f"Required parameter: {name}.{self.CONFIGURATION_API_KEY}"
             )
+
+        for key, default in [
+            (self.SETTINGS_DEFAULT_TEMPERATURE, self.CONFIGURATION_TEMPERATURE),
+            (self.SETTINGS_DEFAULT_MAX_TOKEN, self.CONFIGURATION_MAX_TOKEN),
+            (self.SETTINGS_DEFAULT_SEED, self.CONFIGURATION_SEED),
+            (self.SETTINGS_DEFAULT_STORE, self.CONFIGURATION_STORE),
+            (self.SETTINGS_DEFAULT_VERBOSITY, self.CONFIGURATION_VERBOSITY),
+            (
+                self.SETTINGS_DEFAULT_REASONING_EFFORT,
+                self.CONFIGURATION_REASONING_EFFORT,
+            ),
+        ]:
+            if self.config.get(key, default) is None or self.config.get(key) == "none":
+                self.config[key] = omit
+
         url = self.config.get(self.CONFIGURATION_URL, self.SETTINGS_DEFAULT_URL)
         if url is not None and url.lower() == "none":
             url = None
@@ -69,8 +97,12 @@ class OpenAIAnalyser(Analyser):
         system_msg: str,
         user_msg: str,
         model: str,
-        temperature: int,
-        max_tokens: int = None,
+        temperature: Optional[float] | Omit = omit,
+        max_tokens: Optional[int] | Omit = omit,
+        seed: Optional[int] | Omit = omit,
+        store: Optional[bool] | Omit = omit,
+        verbosity: Optional[Literal["low", "medium", "high"]] | Omit = omit,
+        reasoning_effort: Optional[ReasoningEffort] | Omit = omit,
     ):
         assert system_msg is not None or user_msg is not None
 
@@ -80,12 +112,18 @@ class OpenAIAnalyser(Analyser):
         if user_msg is not None:
             messages.append({"role": "user", "content": user_msg}),
 
+        logger.debug(f"Input messages: {messages}")
         res = self._client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=temperature,
-            max_tokens=max_tokens,
+            max_completion_tokens=max_tokens,
+            seed=seed,
+            store=store,
+            verbosity=verbosity,
+            reasoning_effort=reasoning_effort,
         )
+        logger.debug(f"Response: {res}")
 
         return res
 
@@ -102,13 +140,22 @@ class OpenAIAnalyser(Analyser):
             temperature=self.config.get(
                 self.CONFIGURATION_TEMPERATURE, self.SETTINGS_DEFAULT_TEMPERATURE
             ),
+            seed=self.config.get(self.CONFIGURATION_SEED, self.SETTINGS_DEFAULT_SEED),
+            store=self.config.get(
+                self.CONFIGURATION_STORE, self.SETTINGS_DEFAULT_STORE
+            ),
+            verbosity=self.config.get(
+                self.CONFIGURATION_VERBOSITY, self.SETTINGS_DEFAULT_VERBOSITY
+            ),
+            reasoning_effort=self.config.get(
+                self.CONFIGURATION_REASONING_EFFORT,
+                self.SETTINGS_DEFAULT_REASONING_EFFORT,
+            ),
         )
-        logger.debug(f"Response: {res}")
 
         if len(res.choices) > 0:
-            # the API escapes special characters such as newlines
             res_text = (
-                res.choices[0].message.content.strip().encode().decode("unicode_escape")
+                res.choices[0].message.content.strip()
             )
             return TokenDiff.token_level_diff(text, res_text)
 
@@ -116,8 +163,8 @@ class OpenAIAnalyser(Analyser):
 
     def _generate(self, text) -> Optional[str]:
         res = self._chat_endpoint(
-            system_msg=text,
-            user_msg=None,
+            user_msg=text,
+            system_msg=None,
             model=self.config.get(
                 self.CONFIGURATION_MODEL, self.SETTINGS_DEFAULT_MODEL
             ),
@@ -127,13 +174,23 @@ class OpenAIAnalyser(Analyser):
             max_tokens=self.config.get(
                 self.CONFIGURATION_MAX_TOKEN, self.SETTINGS_DEFAULT_MAX_TOKEN
             ),
+            seed=self.config.get(self.CONFIGURATION_SEED, self.SETTINGS_DEFAULT_SEED),
+            store=self.config.get(
+                self.CONFIGURATION_STORE, self.SETTINGS_DEFAULT_STORE
+            ),
+            verbosity=self.config.get(
+                self.CONFIGURATION_VERBOSITY, self.SETTINGS_DEFAULT_VERBOSITY
+            ),
+            reasoning_effort=self.config.get(
+                self.CONFIGURATION_REASONING_EFFORT,
+                self.SETTINGS_DEFAULT_REASONING_EFFORT,
+            ),
         )
-        logger.debug(f"Response: {res}")
 
         if len(res.choices) > 0:
             # the API escapes special characters such as newlines
             return (
-                res.choices[0].message.content.strip().encode().decode("unicode_escape")
+                res.choices[0].message.content.strip()
             )
 
         return None
